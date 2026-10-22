@@ -1,3 +1,6 @@
+// Bump when scoring rules change, so cached results made under older rules are rescanned.
+export const SCORING_VERSION = 2;
+
 // Modality weights: video is the primary, robustness-tested signal; image (frames) and
 // voice back it up. Weights are renormalized over whichever modalities are present.
 const WEIGHTS = { video: 0.5, image: 0.25, audio: 0.25 };
@@ -8,6 +11,15 @@ const FORENSIC_WEIGHT = 0.15;
 // Pretrained models are used as published, without calibration on this app's data.
 const UNCALIBRATED_MARGIN = 0.08;
 const FORENSIC_ONLY_MARGIN = 0.2;
+// Heavy compression pushes real files' scores UP (artifacts look "fake") and fakes' scores
+// DOWN (the traces get wiped out). So a rise on the copies only nudges the upper bound,
+// while a drop widens the lower bound more, and neither can blow the range open.
+const RISE_FACTOR = 0.25;
+const RISE_CAP = 0.05;
+const DROP_FACTOR = 0.5;
+const DROP_CAP = 0.15;
+// Disagreement between detectors only matters when at least one of them leans "fake".
+const DISAGREEMENT_FLOOR = 0.5;
 const AUTHENTIC_BELOW = 0.35;
 const MANIPULATED_ABOVE = 0.65;
 
@@ -27,11 +39,18 @@ export function summarizeModality(engine, variants, { aggregate = 'variants' } =
   if (!scores.length) return { engine, variants, score: undefined, robustnessSpread: undefined };
   if (aggregate === 'frames') return { engine, variants, score: topQuarterMean(scores), robustnessSpread: undefined };
   const original = variants.find((v) => v.name === 'original' && typeof v.score === 'number');
+  const reference = original ? original.score : mean(scores);
+  const shifts = variants
+    .filter((v) => v !== original && typeof v.score === 'number')
+    .map((v) => v.score - reference);
   return {
     engine,
     variants,
-    score: original ? original.score : mean(scores),
+    score: reference,
     robustnessSpread: Math.max(...scores) - Math.min(...scores),
+    // Largest rise and largest drop of a degraded copy relative to the file as uploaded.
+    riseOnCopies: Math.max(0, ...shifts),
+    dropOnCopies: Math.max(0, ...shifts.map((d) => -d)),
   };
 }
 
@@ -50,7 +69,13 @@ export function computeConfidence(results, metadata = {}, forensics) {
   }
 
   let score = 0.5;
-  let margin = BASE_MARGIN;
+  // Separate margins below and above the score, so the range can be asymmetric.
+  let below = BASE_MARGIN;
+  let above = BASE_MARGIN;
+  const widen = (by) => {
+    below += by;
+    above += by;
+  };
   if (present.length) {
     const totalWeight = present.reduce((sum, [m]) => sum + WEIGHTS[m], 0);
     score = present.reduce((sum, [m, r]) => sum + r.score * WEIGHTS[m], 0) / totalWeight;
@@ -59,26 +84,36 @@ export function computeConfidence(results, metadata = {}, forensics) {
   // Forensic checks are heuristic, so they only nudge a model score; alone they get a wide band.
   if (forensicScore !== null) {
     score = present.length ? score * (1 - FORENSIC_WEIGHT) + forensicScore * FORENSIC_WEIGHT : forensicScore;
-    if (!present.length) margin += FORENSIC_ONLY_MARGIN;
+    if (!present.length) widen(FORENSIC_ONLY_MARGIN);
     const concerns = forensics.evidence.filter((e) => e.flag === 'concern').map((e) => e.label);
     if (concerns.length) reasons.push(`Forensic checks raised concerns: ${concerns.join(', ')}`);
   }
 
-  const maxSpread = Math.max(0, ...present.map(([, r]) => r.robustnessSpread ?? 0));
-  if (maxSpread > 0.1) reasons.push(`Score shifted by up to ${(maxSpread * 100).toFixed(0)} points under re-encoding`);
-  margin += maxSpread / 2;
+  // Older scans have no rise/drop fields; treat their whole spread as both, as before.
+  const rise = Math.max(0, ...present.map(([, r]) => r.riseOnCopies ?? r.robustnessSpread ?? 0));
+  const drop = Math.max(0, ...present.map(([, r]) => r.dropOnCopies ?? r.robustnessSpread ?? 0));
+  above += Math.min(RISE_CAP, rise * RISE_FACTOR);
+  below += Math.min(DROP_CAP, drop * DROP_FACTOR);
+  if (rise > 0.15) {
+    reasons.push(`Heavily compressed copies scored up to ${(rise * 100).toFixed(0)} points higher; compression artifacts can look like manipulation, so this counts for little`);
+  }
+  if (drop > 0.15) {
+    reasons.push(`The detector’s signal faded on compressed copies (down by up to ${(drop * 100).toFixed(0)} points), so this result is fragile`);
+  }
 
   if (present.length > 1) {
     const scores = present.map(([, r]) => r.score);
-    const disagreement = Math.max(...scores) - Math.min(...scores);
-    if (disagreement > 0.3) reasons.push('Video, image and voice detectors disagree');
-    margin += disagreement / 4;
+    if (Math.max(...scores) >= DISAGREEMENT_FLOOR) {
+      const disagreement = Math.max(...scores) - Math.min(...scores);
+      if (disagreement > 0.3) reasons.push('Video, image and voice detectors disagree');
+      widen(disagreement / 4);
+    }
   }
 
-  if (present.some(([, r]) => r.engine === 'onnx')) margin += UNCALIBRATED_MARGIN;
+  if (present.some(([, r]) => r.engine === 'onnx')) widen(UNCALIBRATED_MARGIN);
 
   if (present.some(([, r]) => r.engine === 'stub')) {
-    margin += STUB_MARGIN;
+    widen(STUB_MARGIN);
     reasons.push('No ML model connected: scores come from the development stub');
   }
 
@@ -94,9 +129,12 @@ export function computeConfidence(results, metadata = {}, forensics) {
     reasons.push('Camera EXIF present (can be forged, weak evidence)');
   }
 
-  margin = Math.min(0.5, margin);
-  const low = Math.max(0, score - margin);
-  const high = Math.min(1, score + margin);
+  below = Math.min(0.5, below);
+  above = Math.min(0.5, above);
+  const low = Math.max(0, score - below);
+  const high = Math.min(1, score + above);
+  // Reported margin: the average half-width, for the uncertainty metric.
+  const margin = (below + above) / 2;
 
   let band = 'inconclusive';
   if (low >= MANIPULATED_ABOVE) band = 'likely_manipulated';

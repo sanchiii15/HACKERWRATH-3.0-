@@ -5,7 +5,7 @@ import { Scan } from '../models/Scan.js';
 import { inspectMetadata } from './metadata.js';
 import { probe, extractAudio, extractFrames, createStressVariants } from './media.js';
 import { detect, engineFor } from './detectors/index.js';
-import { summarizeModality, computeConfidence, computeRisk } from './scoring.js';
+import { summarizeModality, computeConfidence, computeRisk, SCORING_VERSION } from './scoring.js';
 import { runForensics } from './forensics/index.js';
 
 const FRAME_ANOMALY_THRESHOLD = 0.7;
@@ -117,6 +117,7 @@ export async function processScan(scanId, filePath) {
     scan.results = results;
     scan.anomalies = anomalies.sort((a, b) => a.start - b.start);
     scan.confidence = computeConfidence(results, scan.metadata, forensics);
+    scan.scoringVersion = SCORING_VERSION;
     scan.risk = computeRisk({
       mediaType: scan.mediaType,
       results,
