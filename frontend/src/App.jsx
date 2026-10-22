@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
-import { Moon, ScanFace, Sun } from 'lucide-react'
+import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronDown, Menu, Moon, ScanFace, Sun, X } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { getHealth } from '@/lib/api'
 import { MEDIA_TYPE_LIST } from '@/lib/mediaTypes'
@@ -8,6 +14,8 @@ import DashboardPage from '@/pages/DashboardPage'
 import CheckPage from '@/pages/CheckPage'
 import ScanPage from '@/pages/ScanPage'
 import HistoryPage from '@/pages/HistoryPage'
+import HowItWorksPage from '@/pages/HowItWorksPage'
+import StaySafePage from '@/pages/StaySafePage'
 
 // Defaults to the light (white + navy) theme; the toggle remembers the choice.
 function useTheme() {
@@ -39,7 +47,7 @@ function StatusDot() {
   const DETECTOR_TEXT = { onnx: 'AI models: local', remote: 'AI models: remote', stub: 'No AI model (stub)' }
   const text = health.status !== 'ok' ? 'API offline' : health.db !== 'connected' ? 'Database offline' : DETECTOR_TEXT[health.detector] ?? `Detectors: ${health.detector}`
   return (
-    <span className="hidden items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80 lg:flex">
+    <span className="hidden items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80 xl:flex">
       <span className="relative flex size-2">
         {ok && <span className="absolute inline-flex size-full animate-ping rounded-full bg-authentic opacity-75" />}
         <span className={cn('relative inline-flex size-2 rounded-full', ok ? 'bg-authentic' : 'bg-manipulated')} />
@@ -49,14 +57,69 @@ function StatusDot() {
   )
 }
 
-const navClass = ({ isActive }) =>
+const LINKS = [
+  { to: '/', label: 'Dashboard', end: true },
+  { to: '/history', label: 'History' },
+  { to: '/how-it-works', label: 'How it works' },
+  { to: '/stay-safe', label: 'Stay safe' },
+]
+
+const pillClass = (active) =>
   cn(
-    'relative shrink-0 rounded-lg px-3 py-1.5 text-sm transition-all duration-200',
-    isActive ? 'bg-white font-medium text-navy shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white',
+    'relative flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm transition-all duration-200',
+    active ? 'bg-white font-medium text-navy shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white',
   )
+
+// One "New scan" entry instead of three separate links; the dashboard already shows the checks.
+function NewScanMenu() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className={cn(pillClass(pathname.startsWith('/check/')), 'outline-none data-[popup-open]:bg-white/15')}>
+        New scan <ChevronDown className="size-3.5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="min-w-56">
+        {MEDIA_TYPE_LIST.map((m) => (
+          <DropdownMenuItem key={m.key} onClick={() => navigate(`/check/${m.key}`)} className="items-start gap-3 py-2">
+            <m.icon className="mt-0.5 size-4" />
+            <span className="grid gap-0.5">
+              <span className="font-medium">{m.label}</span>
+              <span className="text-xs text-muted-foreground">{m.formats}</span>
+            </span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+// Phone layout: everything in one panel under the header.
+function MobileMenu({ onClose }) {
+  const linkClass = ({ isActive }) =>
+    cn('block rounded-lg px-3 py-2 text-sm', isActive ? 'bg-white font-medium text-navy' : 'text-white/80 hover:bg-white/10')
+  return (
+    <nav className="border-t border-white/10 px-4 pt-2 pb-4 md:hidden" aria-label="Mobile">
+      <div className="mx-auto grid max-w-6xl gap-1">
+        <NavLink to="/" end className={linkClass} onClick={onClose}>Dashboard</NavLink>
+        <p className="px-3 pt-2 text-xs font-medium tracking-wide text-white/50 uppercase">New scan</p>
+        {MEDIA_TYPE_LIST.map((m) => (
+          <NavLink key={m.key} to={`/check/${m.key}`} className={linkClass} onClick={onClose}>
+            <span className="flex items-center gap-2"><m.icon className="size-4" />{m.label}</span>
+          </NavLink>
+        ))}
+        <div className="my-1 border-t border-white/10" />
+        {LINKS.slice(1).map((l) => (
+          <NavLink key={l.to} to={l.to} className={linkClass} onClick={onClose}>{l.label}</NavLink>
+        ))}
+      </div>
+    </nav>
+  )
+}
 
 export default function App() {
   const [dark, setDark] = useTheme()
+  const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
 
   return (
@@ -68,20 +131,18 @@ export default function App() {
             <span className="grid size-9 place-items-center rounded-xl bg-white text-navy transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
               <ScanFace className="size-5" />
             </span>
-            <span className="hidden tracking-tight md:inline">
+            <span className="tracking-tight">
               Deepfake<span className="text-sky">Screener</span>
             </span>
           </NavLink>
-          <nav className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
-            <NavLink to="/" end className={navClass}>Dashboard</NavLink>
-            {MEDIA_TYPE_LIST.map((m) => (
-              <NavLink key={m.key} to={`/check/${m.key}`} className={navClass}>
-                <span className="flex items-center gap-1.5"><m.icon className="size-4" />{m.label.replace(' check', '')}</span>
-              </NavLink>
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+            <NavLink to="/" end className={({ isActive }) => pillClass(isActive)}>Dashboard</NavLink>
+            <NewScanMenu />
+            {LINKS.slice(1).map((l) => (
+              <NavLink key={l.to} to={l.to} className={({ isActive }) => pillClass(isActive)}>{l.label}</NavLink>
             ))}
-            <NavLink to="/history" className={navClass}>History</NavLink>
           </nav>
-          <div className="ml-auto flex shrink-0 items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
             <StatusDot />
             <button
               type="button"
@@ -91,8 +152,18 @@ export default function App() {
             >
               {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              className="grid size-9 place-items-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white md:hidden"
+            >
+              {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </button>
           </div>
         </div>
+        {menuOpen && <MobileMenu onClose={() => setMenuOpen(false)} />}
       </header>
 
       {/* key restarts the entrance animation on every route change */}
@@ -102,6 +173,8 @@ export default function App() {
           <Route path="/check/:type" element={<CheckPage />} />
           <Route path="/scans/:id" element={<ScanPage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/stay-safe" element={<StaySafePage />} />
         </Routes>
       </main>
 
