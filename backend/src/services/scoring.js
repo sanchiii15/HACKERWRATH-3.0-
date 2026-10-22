@@ -13,14 +13,24 @@ const MANIPULATED_ABOVE = 0.65;
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
-// Summarize one modality from its per-variant scores.
-export function summarizeModality(engine, variants) {
+const topQuarterMean = (xs) => mean([...xs].sort((a, b) => b - a).slice(0, Math.max(1, Math.ceil(xs.length / 4))));
+
+/*
+ * Summarize one modality.
+ * - Stress-test variants: the score is the file as uploaded ("original"); the degraded copies
+ *   only measure how fragile that score is (robustnessSpread), which widens the range.
+ * - Sampled frames (aggregate: 'frames'): the mean of the most suspicious quarter, and no
+ *   spread, since frames differ because the scene changes, not because of compression.
+ */
+export function summarizeModality(engine, variants, { aggregate = 'variants' } = {}) {
   const scores = variants.map((v) => v.score).filter((s) => typeof s === 'number');
   if (!scores.length) return { engine, variants, score: undefined, robustnessSpread: undefined };
+  if (aggregate === 'frames') return { engine, variants, score: topQuarterMean(scores), robustnessSpread: undefined };
+  const original = variants.find((v) => v.name === 'original' && typeof v.score === 'number');
   return {
     engine,
     variants,
-    score: mean(scores),
+    score: original ? original.score : mean(scores),
     robustnessSpread: Math.max(...scores) - Math.min(...scores),
   };
 }
@@ -210,7 +220,8 @@ export function computeRisk({ mediaType, results, anomalies = [], metadata = {},
   // Stub scores are placeholders, so never name a manipulation type from them.
   const stub = modalities.some((r) => r.engine === 'stub');
   const types = mergeTypes(results);
-  const top = !stub && types[0]?.probability >= 0.4 ? types[0] : null;
+  // Only name a technique when a detector is fairly sure; borderline values aren't evidence of a type.
+  const top = !stub && types[0]?.probability >= 0.55 ? types[0] : null;
 
   if (aiDeclared) {
     const by = forensics.provenance.claimGenerator ? ` by ${forensics.provenance.claimGenerator}` : '';

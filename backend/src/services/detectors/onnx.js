@@ -32,9 +32,29 @@ function softmax(logits) {
 
 async function run(key, input, dims) {
   const s = await session(key);
-  const out = await s.run({ [s.inputNames[0]]: new ort.Tensor('float32', input, dims) });
+  const feeds = { [s.inputNames[0]]: new ort.Tensor('float32', input, dims) };
+  // Some exports (e.g. the XLS-R voice model) also take an all-ones attention mask.
+  if (s.inputNames.includes('attention_mask')) {
+    const mask = MODELS[key].audio?.attentionMask === 'int32'
+      ? new ort.Tensor('int32', new Int32Array(input.length).fill(1), dims)
+      : new ort.Tensor('int64', new BigInt64Array(input.length).fill(1n), dims);
+    feeds.attention_mask = mask;
+  }
+  const out = await s.run(feeds);
   return Array.from(out[s.outputNames[0]].data);
 }
+
+const median = (xs) => {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+
+// Mean of the highest quarter of values: a partly generated clip shouldn't be averaged away.
+const topQuarterMean = (xs) => {
+  const s = [...xs].sort((a, b) => b - a).slice(0, Math.max(1, Math.ceil(xs.length / 4)));
+  return s.reduce((a, b) => a + b, 0) / s.length;
+};
 
 // ---------------------------------------------------------------- images
 
@@ -63,16 +83,16 @@ async function imageTensor(key, input, seek) {
 }
 
 /*
- * Scores one image (or one video frame):
- * - Community Forensics ViT → probability the image is AI-generated;
- * - AI-vs-Deepfake-vs-Real ViT → artificial / deepfake (face manipulation) / real.
- * AI-generated combines both models (the research model weighted higher); the deepfake
- * class becomes the face-swap probability. The overall score is the stronger of the two.
+ * Scores one image (or one video frame) for AI generation:
+ * - Community Forensics ViT → probability the image is AI-generated (main signal: it scored
+ *   0% on every frame of a real webcam recording in testing);
+ * - AI-vs-Deepfake-vs-Real ViT → its "artificial" class as a weak second opinion.
+ * No face-swap probability is reported: the only face model available gave ~40% "deepfake"
+ * to real and fake faces alike, so it carried no information.
  */
 export async function detectImage(input, { seek } = {}) {
   const models = {};
   let aiGenerated;
-  let faceSwap;
 
   if (hasModel('aiImage')) {
     const t = await imageTensor('aiImage', input, seek);
@@ -86,26 +106,23 @@ export async function detectImage(input, { seek } = {}) {
 
   const cf = models.communityForensics;
   const tri = models.aiVsDeepfakeVsReal;
-  if (cf != null && tri) aiGenerated = 0.65 * cf + 0.35 * tri.artificial;
+  if (cf != null && tri) aiGenerated = 0.8 * cf + 0.2 * tri.artificial;
   else aiGenerated = cf ?? tri?.artificial;
-  faceSwap = tri?.deepfake;
 
-  const types = {};
-  if (aiGenerated != null) types.ai_generated = aiGenerated;
-  if (faceSwap != null) types.face_swap = faceSwap;
-  return { score: Math.max(aiGenerated ?? 0, faceSwap ?? 0), types, models, segments: [] };
+  const types = aiGenerated != null ? { ai_generated: aiGenerated } : {};
+  return { score: aiGenerated ?? 0, types, models, segments: [] };
 }
 
 // ---------------------------------------------------------------- video
 
-const VIDEO_SAMPLES = 6;
+const VIDEO_SAMPLES = 8;
 
 async function durationOf(input) {
   const { stdout } = await ffprobe(['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', input]);
   return Number(stdout.toString().trim()) || 0;
 }
 
-// Scores evenly spaced frames of a clip; flags frames scoring ≥ 0.7 as segments.
+// Scores evenly spaced frames; the clip score is the mean of its most suspicious quarter of frames.
 export async function detectVideo(input) {
   const duration = await durationOf(input);
   const times = duration > 0
@@ -121,12 +138,11 @@ export async function detectVideo(input) {
   }
   if (!frames.length) throw new Error('No decodable frames for the video detector');
 
-  const mean = (k) => frames.reduce((s, f) => s + (f.types[k] ?? 0), 0) / frames.length;
   const step = duration / VIDEO_SAMPLES || 1;
-  const types = { ai_generated: mean('ai_generated'), face_swap: mean('face_swap') };
+  const score = topQuarterMean(frames.map((f) => f.score));
   return {
-    score: Math.max(types.ai_generated, types.face_swap),
-    types,
+    score,
+    types: { ai_generated: score },
     segments: frames
       .filter((f) => f.score >= 0.7)
       .map((f) => ({ start: Math.max(0, f.t - step / 2), end: f.t + step / 2, score: f.score, label: 'Detector flagged frame' })),
@@ -140,7 +156,8 @@ const MAX_CHUNKS = 15;
 
 /*
  * Voice anti-spoofing: 16 kHz mono audio in 4 s chunks, each normalized to zero mean /
- * unit variance (Wav2Vec2FeatureExtractor). The score is the mean P(fake) across chunks.
+ * unit variance (Wav2Vec2FeatureExtractor). The score is the median P(fake) across chunks,
+ * so a few odd chunks (music, noise-suppressed laptop audio) can't decide the result alone.
  */
 export async function detectAudio(input) {
   const { sampleRate } = MODELS.voice.audio;
@@ -163,7 +180,7 @@ export async function detectAudio(input) {
     chunks.push({ start: start / sampleRate, end: (start + slice.length) / sampleRate, fake });
   }
 
-  const score = chunks.reduce((s, c) => s + c.fake, 0) / chunks.length;
+  const score = median(chunks.map((c) => c.fake));
   return {
     score,
     types: { synthetic_voice: score },

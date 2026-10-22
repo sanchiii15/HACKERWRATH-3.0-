@@ -23,7 +23,8 @@ export const MODELS = {
     image: { shortestEdge: 440, crop: 384, resample: 'bicubic', mean: CLIP_MEAN, std: CLIP_STD },
     output: 'sigmoid', // single logit: P(fake)
   },
-  // ViT classifier: Artificial (AI-generated) / Deepfake (face manipulation) / Real.
+  // ViT classifier: Artificial (AI-generated) / Deepfake / Real. Only "artificial" is used, as a
+  // weak second opinion: its "deepfake" class sat near 40% on every real and fake test image.
   imageTriage: {
     repo: 'prithivMLmods/AI-vs-Deepfake-vs-Real-ONNX',
     revision: '8a3d50ffa59655423ccaa7d2b3270cba20921cef',
@@ -33,13 +34,15 @@ export const MODELS = {
     output: 'softmax',
     labels: ['artificial', 'deepfake', 'real'],
   },
-  // wav2vec2-base fine-tuned for bona fide vs spoofed speech (ASVspoof 2021, 92.8% reported accuracy).
+  // wav2vec2 XLS-R (315M) fine-tuned on ASVspoof 2019 LA, i.e. text-to-speech and voice
+  // conversion attacks (EER 4.0%). Replaces a model trained on ASVspoof 2021 PA (replay attacks),
+  // which flagged ordinary room recordings as fake.
   voice: {
-    repo: 'ai8shiro/deepfake-audio-wav2vec2-ONNX',
-    revision: '78a7991b7f413bd6ce15efd7cb27000736acc78a',
-    file: 'onnx/model.onnx',
-    license: 'MIT',
-    audio: { sampleRate: 16000, normalize: true },
+    repo: 'pranjal-pravesh/wav2vec2-large-xlsr-deepfake-audio-classification',
+    revision: '4b1c4a294ab68ab444dac038fec8e8da2cc1982f',
+    file: 'model_int8.onnx',
+    license: 'Apache-2.0',
+    audio: { sampleRate: 16000, normalize: true, attentionMask: 'int32' },
     output: 'softmax',
     labels: ['real', 'fake'],
   },
