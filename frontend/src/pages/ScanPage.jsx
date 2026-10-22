@@ -61,7 +61,7 @@ export default function ScanPage() {
           <a
             href={reportUrl(scan._id)}
             download
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border bg-card px-3 py-2 text-sm font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:border-navy/40 hover:shadow-md"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border bg-card px-3 py-2 text-sm font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-md"
           >
             <Download className="size-4" /> Download report
           </a>

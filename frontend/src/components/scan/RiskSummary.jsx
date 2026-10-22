@@ -42,7 +42,6 @@ export default function RiskSummary({ risk, confidence }) {
       className="relative animate-rise overflow-hidden rounded-3xl border bg-card p-6 shadow-lg shadow-navy/5"
       style={{ borderTop: `4px solid ${level.color}` }}
     >
-      <div className="absolute -top-20 -right-20 size-56 rounded-full blur-3xl" style={{ background: level.color, opacity: 0.12 }} />
       <div className="relative flex flex-col items-center gap-6 sm:flex-row">
         <Gauge confidence={confidence} color={level.color} />
         <div className="space-y-3 text-center sm:text-left">

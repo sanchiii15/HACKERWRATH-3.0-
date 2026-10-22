@@ -35,15 +35,15 @@ export default function ScanProgress({ scan }) {
   const percent = Math.round(((current + 0.5) / steps.length) * 100)
 
   return (
-    <section className="floating-panel relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy-deep via-navy to-navy-deep p-6 text-white sm:p-8">
+    <section className="floating-panel relative overflow-hidden rounded-3xl bg-card p-6 text-foreground sm:p-8">
       <div className="relative grid items-center gap-8 md:grid-cols-[200px_1fr]">
         <ScannerGraphic className="mx-auto w-40 md:w-full" />
         <div className="space-y-5">
           <div className="space-y-2">
             <h2 className="text-xl font-semibold">Analysing your {scan.mediaType}…</h2>
-            <div className="h-2 overflow-hidden rounded-full bg-white/15">
+            <div className="h-2 overflow-hidden rounded-full bg-foreground/10">
               <div
-                className="relative h-full overflow-hidden rounded-full bg-gradient-to-r from-sky to-white transition-[width] duration-700"
+                className="relative h-full overflow-hidden rounded-full bg-signal transition-[width] duration-700"
                 style={{ width: `${percent}%` }}
               >
                 <span className="animate-shimmer absolute inset-0" />
@@ -59,9 +59,9 @@ export default function ScanProgress({ scan }) {
                   <span
                     className={cn(
                       'grid size-6 shrink-0 place-items-center rounded-full ring-1',
-                      done && 'bg-sky text-navy-deep ring-sky',
-                      active && 'bg-white text-navy ring-white',
-                      !done && !active && 'ring-white/30',
+                      done && 'bg-signal text-navy-deep ring-signal',
+                      active && 'bg-primary text-primary-foreground ring-primary',
+                      !done && !active && 'ring-foreground/30',
                     )}
                   >
                     {done ? <Check className="size-3.5" /> : active ? <Loader2 className="size-3.5 animate-spin" /> : <span className="text-[10px]">{i + 1}</span>}

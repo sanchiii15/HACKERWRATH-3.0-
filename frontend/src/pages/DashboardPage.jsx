@@ -30,24 +30,23 @@ function Hero({ totals }) {
   return (
     <section
       onMouseMove={trackPointer}
-      className="floating-panel group/hero relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy-deep via-navy to-navy-deep text-white"
+      className="floating-panel group/hero relative overflow-hidden rounded-3xl bg-card text-foreground"
     >
       {/* Soft spotlight that follows the cursor */}
       <div
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover/hero:opacity-100"
         style={{ background: 'radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--sky) 22%, transparent), transparent 70%)' }}
       />
-      <div className="absolute -top-24 -right-24 size-72 rounded-full bg-sky/20 blur-3xl" />
       <div className="relative grid items-center gap-8 p-6 sm:p-10 md:grid-cols-[1fr_260px]">
         <div className="space-y-6">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-sky ring-1 ring-white/15">
+          <span className="inline-flex items-center gap-2 rounded-full bg-foreground/[0.05] px-3 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border">
             <Sparkles className="size-3.5" /> Robustness-tested deepfake screening
           </span>
           <div className="space-y-3">
             <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
               Is that call, photo or voice note <span className="text-sky">real</span>?
             </h1>
-            <p className="max-w-xl text-white/75">
+            <p className="max-w-xl text-muted-foreground">
               Upload suspicious media and get a risk level, the most likely kind of manipulation, and how far the result
               can be trusted after compression. No bare &ldquo;fake&rdquo; labels.
             </p>
@@ -57,7 +56,7 @@ function Hero({ totals }) {
               <Link
                 key={m.key}
                 to={`/check/${m.key}`}
-                className="group inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-navy shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky/20"
+                className="group inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky/20"
               >
                 <m.icon className="size-4" />
                 {m.label}
@@ -65,17 +64,17 @@ function Hero({ totals }) {
               </Link>
             ))}
           </div>
-          <dl className="grid max-w-md grid-cols-3 gap-4 border-t border-white/10 pt-5">
+          <dl className="grid max-w-md grid-cols-3 gap-4 border-t border-border pt-5">
             <div>
-              <dt className="text-xs text-white/60">Files screened</dt>
+              <dt className="text-xs text-muted-foreground">Files screened</dt>
               <dd className="text-2xl font-semibold"><Counter value={totals?.total} /></dd>
             </div>
             <div>
-              <dt className="text-xs text-white/60">High risk caught</dt>
+              <dt className="text-xs text-muted-foreground">High risk caught</dt>
               <dd className="text-2xl font-semibold"><Counter value={totals?.flagged} /></dd>
             </div>
             <div>
-              <dt className="text-xs text-white/60">Media types</dt>
+              <dt className="text-xs text-muted-foreground">Media types</dt>
               <dd className="text-2xl font-semibold"><Counter value={3} /></dd>
             </div>
           </dl>
@@ -106,12 +105,12 @@ function ModuleCard({ mediaType, stats, index }) {
   return (
     <Link
       to={`/check/${mediaType.key}`}
-      className="group relative flex animate-rise flex-col gap-5 overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-navy/30 hover:shadow-xl hover:shadow-navy/10"
+      className="group relative flex animate-rise flex-col gap-5 overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-foreground/20 hover:shadow-xl hover:shadow-navy/10"
       style={{ animationDelay: `${index * 90}ms` }}
     >
-      <span className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-navy to-sky transition-transform duration-500 group-hover:scale-x-100" />
+      <span className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-foreground/40 transition-transform duration-500 group-hover:scale-x-100" />
       <div className="flex items-start justify-between">
-        <span className="grid size-12 place-items-center rounded-xl bg-navy text-white shadow-md shadow-navy/20 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6 dark:bg-white dark:text-navy">
+        <span className="grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-navy/20 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
           <Icon className="size-6" />
         </span>
         <ArrowUpRight className="size-5 text-muted-foreground transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
@@ -137,7 +136,7 @@ function ModuleCard({ mediaType, stats, index }) {
         </div>
       </div>
       <LevelBar levels={stats?.levels} />
-      <span className="flex items-center gap-1 text-sm font-medium text-navy dark:text-sky">
+      <span className="flex items-center gap-1 text-sm font-medium text-foreground">
         Start {mediaType.label.toLowerCase()}
         <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
       </span>
@@ -192,7 +191,7 @@ function RecentScans({ recent }) {
       <CardHeader>
         <CardTitle>Recent scans</CardTitle>
         <CardDescription>
-          <Link to="/history" className="font-medium text-navy hover:underline dark:text-sky">View all history →</Link>
+          <Link to="/history" className="font-medium text-foreground hover:underline">View all history →</Link>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-1">
@@ -208,7 +207,7 @@ function RecentScans({ recent }) {
               style={{ animationDelay: `${200 + i * 60}ms` }}
             >
               {Icon && (
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-navy transition-colors group-hover:bg-navy group-hover:text-white dark:text-sky">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                   <Icon className="size-4" />
                 </span>
               )}

@@ -97,12 +97,11 @@ export default function HowItWorksPage() {
 
   return (
     <div className="space-y-12">
-      <section className="floating-panel relative overflow-hidden rounded-3xl bg-gradient-to-r from-navy-deep to-navy p-6 text-white sm:p-10">
-        <div className="absolute -right-10 -bottom-16 size-56 rounded-full bg-sky/20 blur-3xl" />
+      <section className="floating-panel relative overflow-hidden rounded-3xl bg-card p-6 text-foreground sm:p-10">
         <div className="relative max-w-3xl space-y-3">
           <p className="text-sm font-medium text-sky">How it works</p>
           <h1 className="text-3xl font-semibold tracking-tight text-balance">How Deepfake Screener reaches a verdict</h1>
-          <p className="text-white/75">
+          <p className="text-muted-foreground">
             No single detector is reliable on its own, especially after a file has been compressed by a messaging app. So
             every upload goes through AI models, model-free forensic checks and a stress test, and the result says how far
             it can be trusted.
@@ -114,7 +113,7 @@ export default function HowItWorksPage() {
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {STEPS.map((s, i) => (
             <li key={s.title} className="flex gap-3 rounded-2xl border bg-card p-4">
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-navy text-sm font-semibold text-white dark:bg-white dark:text-navy">{i + 1}</span>
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{i + 1}</span>
               <div className="space-y-1">
                 <p className="font-medium">{s.title}</p>
                 <p className="text-sm text-muted-foreground">{s.text}</p>
@@ -135,7 +134,7 @@ export default function HowItWorksPage() {
               <Card key={m.repo}>
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="grid size-10 place-items-center rounded-xl bg-navy text-white dark:bg-white dark:text-navy">
+                    <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
                       <m.icon className="size-5" />
                     </span>
                     {engines && (
@@ -263,7 +262,7 @@ export default function HowItWorksPage() {
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-5">
         <p className="flex-1 text-sm text-muted-foreground">Want to see it on your own file?</p>
-        <Link to="/" className="rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy/90 dark:bg-white dark:text-navy">
+        <Link to="/" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
           Start a scan
         </Link>
       </div>
