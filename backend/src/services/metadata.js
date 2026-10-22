@@ -1,15 +1,16 @@
 import { exiftool } from 'exiftool-vendored';
 
 // Known AI generators / editing tools that leave traces in metadata.
+// A C2PA manifest on its own is not one: cameras and editors sign files too (see forensics/provenance.js).
 const GENERATOR_PATTERN =
-  /stable.?diffusion|midjourney|dall.?e|openai|firefly|imagen|gemini|flux|comfyui|automatic1111|novelai|leonardo|runway|sora|pika|kling|synthesia|heygen|d-id|elevenlabs|deepfacelab|faceswap|roop|ai.?generated|generative|trainedalgorithmicmedia|c2pa/i;
+  /stable.?diffusion|midjourney|dall.?e|openai|firefly|imagen|gemini|flux|comfyui|automatic1111|novelai|leonardo|runway|sora|pika|kling|synthesia|heygen|d-id|elevenlabs|deepfacelab|faceswap|roop|ai.?generated|generative|trainedalgorithmicmedia/i;
 
 // Tags most likely to carry generator info.
 const GENERATOR_FIELDS = [
   'Software', 'CreatorTool', 'ProcessingSoftware', 'HistorySoftwareAgent', 'Producer',
   'Encoder', 'EncodedBy', 'Comment', 'UserComment', 'ImageDescription', 'Description',
   'Parameters', 'Prompt', 'Workflow', 'DigitalSourceType', 'Credit', 'Artist', 'Make', 'Model',
-  'JUMDLabel', 'ClaimGenerator', 'ActionsSoftwareAgentName', 'HandlerVendorID',
+  'ClaimGenerator', 'ActionsSoftwareAgentName', 'HandlerVendorID',
 ];
 
 const CAMERA_FIELDS = ['Make', 'Model', 'LensModel', 'ExposureTime', 'FNumber', 'ISO', 'DateTimeOriginal'];

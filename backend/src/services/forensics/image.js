@@ -1,4 +1,4 @@
-import { ffmpeg, decodeFrame, grayToPngDataUrl } from './ffmpegRaw.js';
+import { ffmpeg, decodeFrame } from './ffmpegRaw.js';
 import { fft2d, dct2d, hann, percentile, clamp01 } from './fft.js';
 
 const MAX_ELA_SIDE = 2048;
@@ -52,8 +52,6 @@ export async function errorLevelAnalysis(input, { width, height, lossless }) {
   const p99 = percentile(blocks, 99);
   const ratio = p99 / Math.max(median, 0.5);
 
-  const heat = Uint8Array.from(diff, (d) => Math.min(255, d * 10));
-  const heatmap = await grayToPngDataUrl(heat, w, h, { colormap: 'inferno' });
 
   // Lossless sources have no prior JPEG grid, so ELA says little about them.
   // High-contrast edges and text also stand out in ELA, so the thresholds are deliberately lenient.
@@ -66,7 +64,6 @@ export async function errorLevelAnalysis(input, { width, height, lossless }) {
     outlierRatio: ratio,
     analysedSize: `${w}x${h}`,
     lossless,
-    heatmap,
   };
 }
 
@@ -133,18 +130,12 @@ export async function frequencySpectrum(input, { seek } = {}) {
     }
   }
 
-  const lo = percentile(logMag, 1);
-  const hi = percentile(logMag, 99.9);
-  const img = Uint8Array.from(logMag, (v) => Math.round(255 * clamp01((v - lo) / (hi - lo || 1))));
-  const image = await grayToPngDataUrl(img, n, n, { colormap: 'viridis' });
-
   return {
     // JPEG block grids and regular textures (fabric, screens) also create peaks, so start high.
     score: clamp01((peak - 2.2) / 2.5),
     peakStrength: peak,
     peakCount: peakCount / 2, // spectrum is symmetric, so each peak appears twice
     highFrequencyShare: allEnergy ? hiEnergy / allEnergy : 0,
-    image,
   };
 }
 

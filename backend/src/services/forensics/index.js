@@ -143,10 +143,12 @@ export async function runForensics({ scanId, filePath, mediaType, info, exif }) 
   }
 
   // ---- Provenance ----
-  const provenance = inspectProvenance(exif);
+  const provenance = await inspectProvenance(filePath, exif);
   out.provenance = provenance;
   if (provenance.aiDisclosed) {
-    add('provenance', 'Content credentials', 0.95, `The file declares itself AI-generated (${provenance.digitalSourceType}).`, 2);
+    add('provenance', 'Content credentials', 0.95,
+      `The file's content credentials declare it AI-generated (${provenance.digitalSourceType}${provenance.claimGenerator ? `, signed by ${provenance.claimGenerator}` : ''}).`,
+      2, 'concern');
   } else if (provenance.c2paPresent) {
     add('provenance', 'Content credentials', 0.1,
       `C2PA manifest present${provenance.claimGenerator ? ` from ${provenance.claimGenerator}` : ''}. Verify its signature with a C2PA validator before trusting it.`,

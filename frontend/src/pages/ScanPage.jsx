@@ -9,7 +9,6 @@ import { getMedia } from '@/lib/mediaStore'
 import { formatBytes, formatDate } from '@/lib/format'
 import ConfidenceCard from '@/components/scan/ConfidenceCard'
 import RiskSummary from '@/components/scan/RiskSummary'
-import RiskMetrics from '@/components/scan/RiskMetrics'
 import ManipulationTypes from '@/components/scan/ManipulationTypes'
 import RobustnessChart from '@/components/scan/RobustnessChart'
 import FrameTimelineChart from '@/components/scan/FrameTimelineChart'
@@ -82,11 +81,6 @@ export default function ScanPage() {
         <div className="grid animate-rise gap-4 [animation-delay:120ms] lg:grid-cols-[3fr_2fr]">
           <ConfidenceCard confidence={scan.confidence} />
           <ManipulationTypes types={scan.risk?.types} primaryType={scan.risk?.primaryType} />
-        </div>
-      )}
-      {done && scan.risk?.metrics?.length > 0 && (
-        <div className="animate-rise [animation-delay:240ms]">
-          <RiskMetrics metrics={scan.risk.metrics} />
         </div>
       )}
 

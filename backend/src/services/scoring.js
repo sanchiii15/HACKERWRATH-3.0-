@@ -73,7 +73,10 @@ export function computeConfidence(results, metadata = {}, forensics) {
   }
 
   // Metadata is supporting evidence only: generator tags nudge up, camera EXIF nudges down slightly.
-  if (metadata.generatorTags?.length) {
+  if (forensics?.provenance?.aiDisclosed) {
+    score = Math.max(score, 0.85);
+    reasons.push('Content credentials (C2PA) declare the file AI-generated');
+  } else if (metadata.generatorTags?.length) {
     score = Math.min(1, score + 0.15);
     reasons.push(`AI generator traces in metadata (${metadata.generatorTags.map((t) => t.tag).join(', ')})`);
   } else if (metadata.hasCameraExif) {
@@ -201,12 +204,25 @@ export function computeRisk({ mediaType, results, anomalies = [], metadata = {},
 
   let level = { likely_manipulated: 'high', inconclusive: 'medium', likely_authentic: 'low' }[confidence.band];
   if (level === 'high' && confidence.score >= 0.85 && confidence.margin <= 0.15) level = 'critical';
-  if (metadata.generatorTags?.length && LEVEL_ORDER.indexOf(level) < LEVEL_ORDER.indexOf('high')) level = 'high';
+  const aiDeclared = Boolean(forensics?.provenance?.aiDisclosed);
+  if ((metadata.generatorTags?.length || aiDeclared) && LEVEL_ORDER.indexOf(level) < LEVEL_ORDER.indexOf('high')) level = 'high';
 
   // Stub scores are placeholders, so never name a manipulation type from them.
   const stub = modalities.some((r) => r.engine === 'stub');
   const types = mergeTypes(results);
   const top = !stub && types[0]?.probability >= 0.4 ? types[0] : null;
+
+  if (aiDeclared) {
+    const by = forensics.provenance.claimGenerator ? ` by ${forensics.provenance.claimGenerator}` : '';
+    return {
+      level,
+      headline: `Declared AI-generated ${mediaType}${by}`,
+      action: 'The file’s own content credentials say it was made with AI. Treat it as synthetic unless the source can show otherwise.',
+      primaryType: 'ai_generated',
+      metrics,
+      types,
+    };
+  }
 
   if (stub) {
     return {
