@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Moon, ScanFace, Sun } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getHealth } from '@/lib/api'
-import UploadPage from '@/pages/UploadPage'
+import { MEDIA_TYPE_LIST } from '@/lib/mediaTypes'
+import DashboardPage from '@/pages/DashboardPage'
+import CheckPage from '@/pages/CheckPage'
 import ScanPage from '@/pages/ScanPage'
 import HistoryPage from '@/pages/HistoryPage'
 
+// Defaults to the light (white + navy) theme; the toggle remembers the choice.
 function useTheme() {
   const [dark, setDark] = useState(() => {
     try {
-      const saved = localStorage.getItem('theme')
-      if (saved) return saved === 'dark'
+      return localStorage.getItem('theme') === 'dark'
     } catch {
-      // storage unavailable
+      return false
     }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -36,49 +36,78 @@ function StatusDot() {
   }, [])
   if (!health) return null
   const ok = health.status === 'ok' && health.db === 'connected'
-  const text = health.status !== 'ok' ? 'API offline' : health.db !== 'connected' ? 'Database offline' : `Detector: ${health.detector}`
+  const DETECTOR_TEXT = { onnx: 'AI models: local', remote: 'AI models: remote', stub: 'No AI model (stub)' }
+  const text = health.status !== 'ok' ? 'API offline' : health.db !== 'connected' ? 'Database offline' : DETECTOR_TEXT[health.detector] ?? `Detectors: ${health.detector}`
   return (
-    <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-      <span className={cn('size-2 rounded-full', ok ? 'bg-authentic' : 'bg-manipulated')} />
+    <span className="hidden items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80 lg:flex">
+      <span className="relative flex size-2">
+        {ok && <span className="absolute inline-flex size-full animate-ping rounded-full bg-authentic opacity-75" />}
+        <span className={cn('relative inline-flex size-2 rounded-full', ok ? 'bg-authentic' : 'bg-manipulated')} />
+      </span>
       {text}
     </span>
   )
 }
 
 const navClass = ({ isActive }) =>
-  cn('rounded-md px-3 py-1.5 text-sm transition-colors', isActive ? 'bg-muted font-medium' : 'text-muted-foreground hover:text-foreground')
+  cn(
+    'relative shrink-0 rounded-lg px-3 py-1.5 text-sm transition-all duration-200',
+    isActive ? 'bg-white font-medium text-navy shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white',
+  )
 
 export default function App() {
   const [dark, setDark] = useTheme()
+  const location = useLocation()
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
-      <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-          <NavLink to="/" className="flex items-center gap-2 font-semibold">
-            <ScanFace className="size-5" />
-            Deepfake Screener
+    <div className="relative isolate min-h-svh text-foreground">
+      <div aria-hidden="true" className="page-grid pointer-events-none fixed inset-0 -z-10" />
+      <header className="sticky top-0 z-40 bg-navy-deep/95 text-white shadow-lg shadow-navy-deep/20 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:gap-4">
+          <NavLink to="/" className="group flex shrink-0 items-center gap-2.5 font-semibold">
+            <span className="grid size-9 place-items-center rounded-xl bg-white text-navy transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
+              <ScanFace className="size-5" />
+            </span>
+            <span className="hidden tracking-tight md:inline">
+              Deepfake<span className="text-sky">Screener</span>
+            </span>
           </NavLink>
-          <nav className="flex gap-1">
-            <NavLink to="/" end className={navClass}>Scan</NavLink>
+          <nav className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
+            <NavLink to="/" end className={navClass}>Dashboard</NavLink>
+            {MEDIA_TYPE_LIST.map((m) => (
+              <NavLink key={m.key} to={`/check/${m.key}`} className={navClass}>
+                <span className="flex items-center gap-1.5"><m.icon className="size-4" />{m.label.replace(' check', '')}</span>
+              </NavLink>
+            ))}
             <NavLink to="/history" className={navClass}>History</NavLink>
           </nav>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-3">
             <StatusDot />
-            <Button variant="ghost" size="icon" onClick={() => setDark(!dark)} aria-label="Toggle theme">
-              {dark ? <Sun /> : <Moon />}
-            </Button>
+            <button
+              type="button"
+              onClick={() => setDark(!dark)}
+              aria-label="Toggle theme"
+              className="grid size-9 place-items-center rounded-lg text-white/80 transition-all hover:rotate-12 hover:bg-white/10 hover:text-white"
+            >
+              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      {/* key restarts the entrance animation on every route change */}
+      <main key={location.pathname} className="mx-auto max-w-6xl animate-rise px-4 py-8">
         <Routes>
-          <Route path="/" element={<UploadPage />} />
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/check/:type" element={<CheckPage />} />
           <Route path="/scans/:id" element={<ScanPage />} />
           <Route path="/history" element={<HistoryPage />} />
         </Routes>
       </main>
+
+      <footer className="border-t py-6 text-center text-xs text-muted-foreground">
+        Automated screening can be wrong in both directions. Treat results as one piece of evidence and verify through a trusted channel.
+      </footer>
     </div>
   )
 }

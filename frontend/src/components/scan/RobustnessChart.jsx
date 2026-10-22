@@ -30,7 +30,7 @@ function ModalityChart({ modality, result, margin }) {
         <CardTitle className="text-sm">{LABELS[modality]}</CardTitle>
         <CardDescription>
           Mean {pct(result.score, 1)} · shift under re-encoding {pct(result.robustnessSpread, 1)}
-          {result.engine === 'stub' && ' · stub engine'}
+          {result.engine === 'stub' ? ' · stub engine' : result.engine === 'onnx' ? ' · local AI model' : ''}
         </CardDescription>
       </CardHeader>
       <CardContent>

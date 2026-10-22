@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import mongoose from 'mongoose';
 import { env } from './config/env.js';
 import scanRoutes from './routes/scans.js';
-import { detectorEngine } from './services/detectors/index.js';
+import { detectorStatus } from './services/detectors/index.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 export function createApp() {
@@ -20,7 +20,8 @@ export function createApp() {
     res.json({
       status: 'ok',
       db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-      detector: detectorEngine,
+      detector: detectorStatus().summary,
+      detectors: detectorStatus(),
     });
   });
 

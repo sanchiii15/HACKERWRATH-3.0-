@@ -3,3 +3,4 @@ node_modules/
 backend/uploads/
 backend/tmp/
 *.log
+backend/models/

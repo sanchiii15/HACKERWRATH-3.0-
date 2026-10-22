@@ -36,7 +36,7 @@ export default function ConfidenceCard({ confidence }) {
   return (
     <Card>
       <CardHeader>
-        <CardDescription>Assessment</CardDescription>
+        <CardDescription>Manipulation likelihood (confidence band)</CardDescription>
         <CardTitle className="flex flex-wrap items-baseline gap-3 text-2xl">
           <span className={cn('rounded-md px-2.5 py-1 text-lg', band.className)}>{band.label}</span>
           <span className="text-base font-normal text-muted-foreground">

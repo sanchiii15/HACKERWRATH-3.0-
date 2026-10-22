@@ -13,6 +13,7 @@ export const env = {
   ffprobePath: process.env.FFPROBE_PATH || null,
   detectorUrl: process.env.DETECTOR_URL ? process.env.DETECTOR_URL.replace(/\/$/, '') : null,
   detectorTimeoutMs: Number(process.env.DETECTOR_TIMEOUT_MS) || 60000,
+  uploadsPer10Min: Number(process.env.UPLOADS_PER_10_MIN) || 30,
   uploadDir: path.join(root, 'uploads'),
   tmpDir: path.join(root, 'tmp'),
 };
