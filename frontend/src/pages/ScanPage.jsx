@@ -1,33 +1,25 @@
 import { useMemo, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Download } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useScan } from '@/hooks/useScan'
 import { getMedia } from '@/lib/mediaStore'
 import { formatBytes, formatDate } from '@/lib/format'
 import ConfidenceCard from '@/components/scan/ConfidenceCard'
+import RiskSummary from '@/components/scan/RiskSummary'
+import RiskMetrics from '@/components/scan/RiskMetrics'
+import ManipulationTypes from '@/components/scan/ManipulationTypes'
 import RobustnessChart from '@/components/scan/RobustnessChart'
 import FrameTimelineChart from '@/components/scan/FrameTimelineChart'
 import MediaWaveform from '@/components/scan/MediaWaveform'
 import AnomalyList from '@/components/scan/AnomalyList'
 import MetadataPanel from '@/components/scan/MetadataPanel'
-
-function Processing({ scan }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Loader2 className="size-4 animate-spin" />
-          Analysing…
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="text-sm text-muted-foreground">{scan.stage ?? 'Queued'}</CardContent>
-    </Card>
-  )
-}
+import ScanProgress from '@/components/scan/ScanProgress'
+import ForensicsPanel from '@/components/scan/ForensicsPanel'
+import FeedbackBox from '@/components/scan/FeedbackBox'
+import { reportUrl } from '@/lib/api'
 
 export default function ScanPage() {
   const { id } = useParams()
@@ -55,15 +47,26 @@ export default function ScanPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <Link to="/history" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> All scans
+      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0 space-y-1">
+        <Link to={`/check/${scan.mediaType}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" /> Check another {scan.mediaType} file
         </Link>
         <h1 className="text-xl font-semibold break-all">{scan.originalName}</h1>
         <p className="text-sm text-muted-foreground">
           {scan.mediaType} · {formatBytes(scan.size)} · {formatDate(scan.createdAt)}
           {scan.processingMs && ` · analysed in ${(scan.processingMs / 1000).toFixed(1)}s`}
         </p>
+      </div>
+        {done && (
+          <a
+            href={reportUrl(scan._id)}
+            download
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border bg-card px-3 py-2 text-sm font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:border-navy/40 hover:shadow-md"
+          >
+            <Download className="size-4" /> Download report
+          </a>
+        )}
       </div>
 
       {scan.status === 'failed' && (
@@ -72,18 +75,34 @@ export default function ScanPage() {
           <AlertDescription>{scan.error}</AlertDescription>
         </Alert>
       )}
-      {(scan.status === 'queued' || scan.status === 'processing') && <Processing scan={scan} />}
+      {(scan.status === 'queued' || scan.status === 'processing') && <ScanProgress scan={scan} />}
 
-      {done && <ConfidenceCard confidence={scan.confidence} />}
+      {done && scan.risk && <RiskSummary risk={scan.risk} confidence={scan.confidence} />}
+      {done && (
+        <div className="grid animate-rise gap-4 [animation-delay:120ms] lg:grid-cols-[3fr_2fr]">
+          <ConfidenceCard confidence={scan.confidence} />
+          <ManipulationTypes types={scan.risk?.types} primaryType={scan.risk?.primaryType} />
+        </div>
+      )}
+      {done && scan.risk?.metrics?.length > 0 && (
+        <div className="animate-rise [animation-delay:240ms]">
+          <RiskMetrics metrics={scan.risk.metrics} />
+        </div>
+      )}
 
       {done && (
-        <Tabs defaultValue="robustness">
+        <Tabs defaultValue={scan.forensics ? 'forensics' : 'robustness'} className="animate-rise [animation-delay:360ms]">
           <TabsList>
+            {scan.forensics && <TabsTrigger value="forensics">Forensics</TabsTrigger>}
             <TabsTrigger value="robustness">Robustness</TabsTrigger>
             {scan.mediaType !== 'image' && <TabsTrigger value="timeline">Timeline</TabsTrigger>}
             {scan.mediaType === 'image' && media && <TabsTrigger value="preview">Preview</TabsTrigger>}
             <TabsTrigger value="metadata">Metadata</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="forensics" className="pt-4">
+            <ForensicsPanel forensics={scan.forensics} />
+          </TabsContent>
 
           <TabsContent value="robustness" className="space-y-4 pt-4">
             <p className="text-sm text-muted-foreground">
@@ -118,6 +137,8 @@ export default function ScanPage() {
           </TabsContent>
         </Tabs>
       )}
+
+      {done && <FeedbackBox scanId={scan._id} initialCount={scan.feedback?.length ?? 0} />}
     </div>
   )
 }

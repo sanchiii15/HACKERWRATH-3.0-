@@ -32,6 +32,8 @@ const modalitySchema = new Schema(
     variants: [variantSchema],
     // How much the score moved under compression/resizing. High = fragile result.
     robustnessSpread: Number,
+    // Per-category probabilities on the original file, e.g. { face_swap: 0.7, lip_sync: 0.2 }.
+    types: { type: Map, of: Number },
   },
   { _id: false },
 );
@@ -44,6 +46,29 @@ const confidenceSchema = new Schema(
     margin: Number,
     band: { type: String, enum: ['likely_authentic', 'inconclusive', 'likely_manipulated'] },
     reasons: [String],
+  },
+  { _id: false },
+);
+
+const riskMetricSchema = new Schema(
+  {
+    key: { type: String, required: true },
+    label: String,
+    value: { type: Number, min: 0, max: 1 }, // 0 = no risk, 1 = maximum risk
+    level: { type: String, enum: ['low', 'medium', 'high'] },
+    detail: String,
+  },
+  { _id: false },
+);
+
+const riskSchema = new Schema(
+  {
+    level: { type: String, enum: ['low', 'medium', 'high', 'critical'] },
+    headline: String, // e.g. "Possible face-swap deepfake"
+    action: String, // what the user should do next
+    primaryType: String, // most likely manipulation category, if any
+    metrics: [riskMetricSchema],
+    types: [{ key: String, label: String, probability: Number, _id: false }],
   },
   { _id: false },
 );
@@ -85,6 +110,20 @@ const scanSchema = new Schema(
     },
     anomalies: [anomalySchema],
     confidence: confidenceSchema,
+    risk: riskSchema,
+
+    // Model-free signal checks: ELA, frequency spectrum, timing, audio, provenance, pHash.
+    forensics: Schema.Types.Mixed,
+
+    // User corrections, collected to measure and retrain the detectors later.
+    feedback: [
+      {
+        label: { type: String, enum: ['authentic', 'manipulated', 'unsure'], required: true },
+        note: { type: String, maxlength: 1000 },
+        createdAt: { type: Date, default: Date.now },
+        _id: false,
+      },
+    ],
 
     processingMs: Number,
   },

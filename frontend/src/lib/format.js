@@ -4,7 +4,14 @@ export const BANDS = {
   likely_manipulated: { label: 'Likely manipulated', color: 'var(--manipulated)', className: 'bg-manipulated/15 text-manipulated' },
 }
 
-export const pct = (x, digits = 0) => (typeof x === 'number' ? `${(x * 100).toFixed(digits)}%` : '—')
+export const RISK_LEVELS = {
+  low: { label: 'Low risk', color: 'var(--authentic)', className: 'bg-authentic/15 text-authentic' },
+  medium: { label: 'Medium risk', color: 'var(--inconclusive)', className: 'bg-inconclusive/15 text-inconclusive' },
+  high: { label: 'High risk', color: 'var(--manipulated)', className: 'bg-manipulated/15 text-manipulated' },
+  critical: { label: 'Critical risk', color: 'var(--manipulated)', className: 'bg-manipulated text-white' },
+}
+
+export const pct =(x, digits = 0) => (typeof x === 'number' ? `${(x * 100).toFixed(digits)}%` : '—')
 
 export function formatBytes(bytes) {
   if (!bytes) return '0 B'

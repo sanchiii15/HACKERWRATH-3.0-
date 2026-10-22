@@ -5,7 +5,8 @@ import { Scan } from '../models/Scan.js';
 import { inspectMetadata } from './metadata.js';
 import { probe, extractAudio, extractFrames, createStressVariants } from './media.js';
 import { detect, detectorEngine } from './detectors/index.js';
-import { summarizeModality, computeConfidence } from './scoring.js';
+import { summarizeModality, computeConfidence, computeRisk } from './scoring.js';
+import { runForensics } from './forensics/index.js';
 
 const FRAME_ANOMALY_THRESHOLD = 0.7;
 
@@ -19,6 +20,7 @@ async function scoreVariants(modality, originalPath, variants) {
   const all = [{ name: 'original', description: 'As uploaded', path: originalPath }, ...variants];
   const scored = [];
   let segments = [];
+  let types;
   for (const v of all) {
     if (v.error) {
       scored.push({ name: v.name, description: v.description, error: v.error });
@@ -27,12 +29,12 @@ async function scoreVariants(modality, originalPath, variants) {
     try {
       const result = await detect(modality, v.path);
       scored.push({ name: v.name, description: v.description, score: result.score });
-      if (v.name === 'original') segments = result.segments;
+      if (v.name === 'original') ({ segments, types } = result);
     } catch (err) {
       scored.push({ name: v.name, description: v.description, error: err.message });
     }
   }
-  return { modality: summarizeModality(detectorEngine, scored), segments };
+  return { modality: { ...summarizeModality(detectorEngine, scored), types }, segments };
 }
 
 function toAnomalies(source, segments) {
@@ -59,6 +61,17 @@ export async function processScan(scanId, filePath) {
 
     const results = {};
     const anomalies = [];
+
+    await setStage(scan, 'Running forensic checks');
+    const { anomalies: forensicAnomalies, ...forensics } = await runForensics({
+      scanId: scan._id,
+      filePath,
+      mediaType: scan.mediaType,
+      info: { ...probeInfo, hasVideo, hasAudio },
+      exif: meta.exif,
+    });
+    scan.forensics = forensics;
+    anomalies.push(...forensicAnomalies);
 
     if (scan.mediaType === 'video' || scan.mediaType === 'image') {
       await setStage(scan, 'Stress-testing (compression, resizing, re-encoding)');
@@ -96,7 +109,15 @@ export async function processScan(scanId, filePath) {
 
     scan.results = results;
     scan.anomalies = anomalies.sort((a, b) => a.start - b.start);
-    scan.confidence = computeConfidence(results, scan.metadata);
+    scan.confidence = computeConfidence(results, scan.metadata, forensics);
+    scan.risk = computeRisk({
+      mediaType: scan.mediaType,
+      results,
+      anomalies: scan.anomalies,
+      metadata: scan.metadata,
+      confidence: scan.confidence,
+      forensics,
+    });
     scan.status = 'complete';
     scan.stage = 'Done';
   } catch (err) {

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { deleteScan, listScans } from '@/lib/api'
-import { BANDS, formatBytes, formatDate, pct } from '@/lib/format'
+import { BANDS, RISK_LEVELS, formatBytes, formatDate, pct } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 20
@@ -15,8 +15,14 @@ function Verdict({ scan }) {
   if (scan.status !== 'complete') {
     return <span className={cn('text-xs capitalize', scan.status === 'failed' ? 'text-manipulated' : 'text-muted-foreground')}>{scan.status}</span>
   }
-  const band = BANDS[scan.confidence.band]
-  return <span className={cn('rounded px-2 py-0.5 text-xs font-medium', band.className)}>{band.label}</span>
+  // Older scans may predate risk metrics; fall back to the confidence band.
+  const tag = scan.risk?.level ? RISK_LEVELS[scan.risk.level] : BANDS[scan.confidence.band]
+  return (
+    <div className="space-y-0.5">
+      <span className={cn('rounded px-2 py-0.5 text-xs font-medium', tag.className)}>{tag.label}</span>
+      {scan.risk?.headline && <p className="text-xs text-muted-foreground">{scan.risk.headline}</p>}
+    </div>
+  )
 }
 
 export default function HistoryPage() {

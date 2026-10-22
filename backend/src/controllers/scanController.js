@@ -50,7 +50,7 @@ export async function listScans(req, res) {
 
   const [items, total] = await Promise.all([
     Scan.find(filter)
-      .select('-metadata.exif -results')
+      .select('-metadata.exif -results -forensics')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit),
@@ -59,11 +59,106 @@ export async function listScans(req, res) {
   res.json({ items, total, page, limit });
 }
 
+// GET /api/scans/stats  — totals per media type and risk level, for the dashboard.
+export async function getStats(_req, res) {
+  const [byType, byLevel, recent] = await Promise.all([
+    Scan.aggregate([
+      {
+        $group: {
+          _id: '$mediaType',
+          total: { $sum: 1 },
+          complete: { $sum: { $cond: [{ $eq: ['$status', 'complete'] }, 1, 0] } },
+          flagged: { $sum: { $cond: [{ $in: ['$risk.level', ['high', 'critical']] }, 1, 0] } },
+          avgScore: { $avg: '$confidence.score' },
+        },
+      },
+    ]),
+    Scan.aggregate([
+      { $match: { status: 'complete' } },
+      { $group: { _id: { mediaType: '$mediaType', level: '$risk.level' }, count: { $sum: 1 } } },
+    ]),
+    Scan.find({}).select('originalName mediaType status confidence risk.level risk.headline createdAt').sort({ createdAt: -1 }).limit(6),
+  ]);
+
+  const mediaTypes = {};
+  for (const t of ['video', 'image', 'audio']) {
+    const row = byType.find((r) => r._id === t);
+    mediaTypes[t] = {
+      total: row?.total ?? 0,
+      complete: row?.complete ?? 0,
+      flagged: row?.flagged ?? 0,
+      avgScore: row?.avgScore ?? null,
+      levels: { low: 0, medium: 0, high: 0, critical: 0 },
+    };
+  }
+  for (const { _id, count } of byLevel) {
+    if (mediaTypes[_id.mediaType] && _id.level) mediaTypes[_id.mediaType].levels[_id.level] = count;
+  }
+
+  res.json({ mediaTypes, recent });
+}
+
 // GET /api/scans/:id
 export async function getScan(req, res) {
-  const scan = await Scan.findById(req.params.id);
-  if (!scan) throw new HttpError(404, 'Scan not found');
+  // Skip the forensic images (base64 PNGs) while the client is still polling for progress.
+  const status = await Scan.findById(req.params.id).select('status').lean();
+  if (!status) throw new HttpError(404, 'Scan not found');
+  const scan = await Scan.findById(req.params.id).select(status.status === 'complete' ? '' : '-forensics');
   res.json(scan);
+}
+
+const FEEDBACK_LABELS = ['authentic', 'manipulated', 'unsure'];
+
+// POST /api/scans/:id/feedback  { label: 'authentic' | 'manipulated' | 'unsure', note? }
+export async function submitFeedback(req, res) {
+  const { label, note } = req.body ?? {};
+  if (!FEEDBACK_LABELS.includes(label)) throw new HttpError(400, `label must be one of: ${FEEDBACK_LABELS.join(', ')}`);
+  if (note != null && (typeof note !== 'string' || note.length > 1000)) throw new HttpError(400, 'note must be a string of at most 1000 characters');
+
+  const scan = await Scan.findByIdAndUpdate(
+    req.params.id,
+    { $push: { feedback: { label, note: note?.trim() || undefined } } },
+    { new: true, runValidators: true },
+  ).select('feedback');
+  if (!scan) throw new HttpError(404, 'Scan not found');
+  res.status(201).json({ feedback: scan.feedback });
+}
+
+// GET /api/scans/:id/report  — downloadable JSON report of one scan.
+export async function downloadReport(req, res) {
+  const scan = await Scan.findById(req.params.id).lean();
+  if (!scan) throw new HttpError(404, 'Scan not found');
+  if (scan.status !== 'complete') throw new HttpError(409, 'Scan has not finished yet');
+
+  const { ela, spectrum, ...forensics } = scan.forensics ?? {};
+  const report = {
+    generatedAt: new Date().toISOString(),
+    disclaimer:
+      'Automated screening result. It is not proof of authenticity or manipulation; verify through an independent, trusted channel.',
+    file: { name: scan.originalName, type: scan.mimeType, size: scan.size, sha256: scan.sha256, scannedAt: scan.createdAt },
+    verdict: scan.risk && {
+      level: scan.risk.level,
+      headline: scan.risk.headline,
+      action: scan.risk.action,
+      suspectedType: scan.risk.primaryType ?? null,
+    },
+    confidence: scan.confidence,
+    riskMetrics: scan.risk?.metrics,
+    manipulationTypes: scan.risk?.types,
+    detectors: scan.results,
+    forensics: {
+      ...forensics,
+      // Images are left out of the JSON; numeric results are kept.
+      ela: ela && { ...ela, heatmap: undefined },
+      spectrum: spectrum && { ...spectrum, image: undefined },
+    },
+    anomalies: scan.anomalies,
+    metadata: scan.metadata,
+    feedback: scan.feedback,
+  };
+
+  res.setHeader('Content-Disposition', `attachment; filename="deepfake-report-${scan._id}.json"`);
+  res.type('application/json').send(JSON.stringify(report, null, 2));
 }
 
 // DELETE /api/scans/:id
