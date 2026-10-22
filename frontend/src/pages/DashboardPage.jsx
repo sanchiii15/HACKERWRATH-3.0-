@@ -26,6 +26,26 @@ function trackPointer(e) {
   e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`)
 }
 
+// Bordered entry point to Live Call Guard, with a pulsing "live" dot.
+function LiveCallButton({ className }) {
+  return (
+    <Link
+      to="/live"
+      className={cn(
+        'group inline-flex items-center gap-2 rounded-xl border-2 border-manipulated/60 bg-manipulated/10 px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-manipulated hover:bg-manipulated/15',
+        className,
+      )}
+    >
+      <span className="relative flex size-2" aria-hidden="true">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-manipulated opacity-75" />
+        <span className="relative inline-flex size-2 rounded-full bg-manipulated" />
+      </span>
+      Live call guard
+      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+    </Link>
+  )
+}
+
 function Hero({ totals }) {
   return (
     <section
@@ -63,6 +83,7 @@ function Hero({ totals }) {
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             ))}
+            <LiveCallButton />
           </div>
           <dl className="grid max-w-md grid-cols-3 gap-4 border-t border-border pt-5">
             <div>

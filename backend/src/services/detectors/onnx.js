@@ -154,6 +154,18 @@ export async function detectVideo(input) {
 const CHUNK_SECONDS = 4;
 const MAX_CHUNKS = 15;
 
+// P(fake) for one chunk of 16 kHz mono PCM, normalized like Wav2Vec2FeatureExtractor.
+export async function scoreVoicePcm(slice) {
+  let mean = 0;
+  for (const v of slice) mean += v;
+  mean /= slice.length;
+  let variance = 0;
+  for (const v of slice) variance += (v - mean) ** 2;
+  const sd = Math.sqrt(variance / slice.length + 1e-7);
+  const data = Float32Array.from(slice, (v) => (v - mean) / sd);
+  return softmax(await run('voice', data, [1, data.length]))[1];
+}
+
 /*
  * Voice anti-spoofing: 16 kHz mono audio in 4 s chunks, each normalized to zero mean /
  * unit variance (Wav2Vec2FeatureExtractor). The score is the median P(fake) across chunks,
@@ -169,14 +181,7 @@ export async function detectAudio(input) {
   for (let start = 0; start < pcm.length && chunks.length < MAX_CHUNKS; start += size) {
     const slice = pcm.subarray(start, Math.min(pcm.length, start + size));
     if (slice.length < sampleRate) break; // ignore a trailing fragment under 1 s
-    let mean = 0;
-    for (const v of slice) mean += v;
-    mean /= slice.length;
-    let variance = 0;
-    for (const v of slice) variance += (v - mean) ** 2;
-    const sd = Math.sqrt(variance / slice.length + 1e-7);
-    const data = Float32Array.from(slice, (v) => (v - mean) / sd);
-    const [, fake] = softmax(await run('voice', data, [1, data.length]));
+    const fake = await scoreVoicePcm(slice);
     chunks.push({ start: start / sampleRate, end: (start + slice.length) / sampleRate, fake });
   }
 

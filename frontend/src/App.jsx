@@ -16,6 +16,7 @@ import ScanPage from '@/pages/ScanPage'
 import HistoryPage from '@/pages/HistoryPage'
 import HowItWorksPage from '@/pages/HowItWorksPage'
 import StaySafePage from '@/pages/StaySafePage'
+import LiveCallPage from '@/pages/LiveCallPage'
 import MessageCheckPage from '@/pages/MessageCheckPage'
 import MessageResultPage from '@/pages/MessageResultPage'
 
@@ -55,6 +56,7 @@ function StatusDot() {
 
 const LINKS = [
   { to: '/', label: 'Dashboard', end: true },
+  { to: '/live', label: 'Live call', live: true },
   { to: '/history', label: 'History' },
   { to: '/how-it-works', label: 'How it works' },
   { to: '/stay-safe', label: 'Stay safe' },
@@ -135,7 +137,10 @@ export default function App() {
             <NavLink to="/" end className={({ isActive }) => pillClass(isActive)}>Dashboard</NavLink>
             <NewScanMenu />
             {LINKS.slice(1).map((l) => (
-              <NavLink key={l.to} to={l.to} className={({ isActive }) => pillClass(isActive)}>{l.label}</NavLink>
+              <NavLink key={l.to} to={l.to} className={({ isActive }) => pillClass(isActive)}>
+                {l.live && <span className="mr-0.5 size-1.5 rounded-full bg-manipulated" aria-hidden="true" />}
+                {l.label}
+              </NavLink>
             ))}
           </nav>
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
@@ -170,6 +175,7 @@ export default function App() {
           <Route path="/check/:type" element={<CheckPage />} />
           <Route path="/messages/:id" element={<MessageResultPage />} />
           <Route path="/scans/:id" element={<ScanPage />} />
+          <Route path="/live" element={<LiveCallPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/stay-safe" element={<StaySafePage />} />
