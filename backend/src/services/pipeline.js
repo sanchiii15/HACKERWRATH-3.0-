@@ -99,7 +99,10 @@ export async function processScan(scanId, filePath) {
         }
       }
       const frameTypes = Object.fromEntries(Object.entries(typeSums).map(([k, s]) => [k, s / frames.length]));
-      results.image = { ...summarizeModality(engineFor('image'), frameScores), types: frameTypes };
+      const frameSummary = summarizeModality(engineFor('image'), frameScores, { aggregate: 'frames' });
+      // The technique breakdown follows the same top-quarter rule as the frame score.
+      if (frameTypes.ai_generated != null) frameTypes.ai_generated = frameSummary.score;
+      results.image = { ...frameSummary, types: frameTypes };
     }
 
     if (scan.mediaType === 'audio' || (scan.mediaType === 'video' && hasAudio)) {

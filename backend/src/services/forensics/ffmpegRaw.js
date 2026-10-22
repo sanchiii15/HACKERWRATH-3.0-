@@ -43,20 +43,6 @@ export async function decodeFrame(input, vf, pixFmt, { seek } = {}) {
   return (await ffmpeg(args)).stdout;
 }
 
-// Colorizes an 8-bit grayscale buffer and returns a small PNG data URL for the UI.
-export async function grayToPngDataUrl(gray, width, height, { colormap = 'inferno', maxWidth = 512 } = {}) {
-  const { stdout } = await ffmpeg(
-    [
-      '-v', 'error',
-      '-f', 'rawvideo', '-pix_fmt', 'gray', '-s', `${width}x${height}`, '-i', 'pipe:0',
-      '-vf', `scale='min(${maxWidth},iw)':-2:flags=area,format=gbrp,pseudocolor=p=${colormap}`,
-      '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', 'pipe:1',
-    ],
-    { input: gray },
-  );
-  return `data:image/png;base64,${stdout.toString('base64')}`;
-}
-
 // Decodes up to `seconds` of audio as mono 32-bit float PCM.
 export async function decodeAudio(input, { sampleRate, seconds = 60 }) {
   const { stdout } = await ffmpeg([

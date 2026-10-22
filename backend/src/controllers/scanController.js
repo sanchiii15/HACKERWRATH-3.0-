@@ -3,9 +3,18 @@ import { Scan } from '../models/Scan.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { sha256File } from '../services/hash.js';
 import { processScan } from '../services/pipeline.js';
+import { engineFor } from '../services/detectors/index.js';
 
 function mediaTypeOf(mimetype) {
   return mimetype.split('/')[0];
+}
+
+// A cached result is stale if it predates the forensic checks or used a different engine
+// (e.g. the stub) for a modality that now has a real detector.
+function isCurrent(scan) {
+  if (!scan.forensics || !scan.risk) return false;
+  const results = scan.results?.toObject?.() ?? scan.results ?? {};
+  return Object.entries(results).every(([modality, r]) => !r?.engine || r.engine === engineFor(modality));
 }
 
 // POST /api/scans  (multipart field "file")
@@ -15,10 +24,10 @@ export async function createScan(req, res) {
 
   const sha256 = await sha256File(filePath);
 
-  // Same bytes already analysed: return the cached result instead of re-running.
+  // Same bytes already analysed with today's detectors: return the cached result instead of re-running.
   if (req.query.force !== 'true') {
     const existing = await Scan.findOne({ sha256, status: 'complete' }).sort({ createdAt: -1 });
-    if (existing) {
+    if (existing && isCurrent(existing)) {
       await fs.rm(filePath, { force: true });
       return res.status(200).json({ cached: true, scan: existing });
     }
@@ -100,10 +109,8 @@ export async function getStats(_req, res) {
 
 // GET /api/scans/:id
 export async function getScan(req, res) {
-  // Skip the forensic images (base64 PNGs) while the client is still polling for progress.
-  const status = await Scan.findById(req.params.id).select('status').lean();
-  if (!status) throw new HttpError(404, 'Scan not found');
-  const scan = await Scan.findById(req.params.id).select(status.status === 'complete' ? '' : '-forensics');
+  const scan = await Scan.findById(req.params.id);
+  if (!scan) throw new HttpError(404, 'Scan not found');
   res.json(scan);
 }
 
@@ -130,7 +137,6 @@ export async function downloadReport(req, res) {
   if (!scan) throw new HttpError(404, 'Scan not found');
   if (scan.status !== 'complete') throw new HttpError(409, 'Scan has not finished yet');
 
-  const { ela, spectrum, ...forensics } = scan.forensics ?? {};
   const report = {
     generatedAt: new Date().toISOString(),
     disclaimer:
@@ -146,12 +152,7 @@ export async function downloadReport(req, res) {
     riskMetrics: scan.risk?.metrics,
     manipulationTypes: scan.risk?.types,
     detectors: scan.results,
-    forensics: {
-      ...forensics,
-      // Images are left out of the JSON; numeric results are kept.
-      ela: ela && { ...ela, heatmap: undefined },
-      spectrum: spectrum && { ...spectrum, image: undefined },
-    },
+    forensics: scan.forensics,
     anomalies: scan.anomalies,
     metadata: scan.metadata,
     feedback: scan.feedback,

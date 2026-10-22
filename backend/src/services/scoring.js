@@ -13,14 +13,24 @@ const MANIPULATED_ABOVE = 0.65;
 
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
-// Summarize one modality from its per-variant scores.
-export function summarizeModality(engine, variants) {
+const topQuarterMean = (xs) => mean([...xs].sort((a, b) => b - a).slice(0, Math.max(1, Math.ceil(xs.length / 4))));
+
+/*
+ * Summarize one modality.
+ * - Stress-test variants: the score is the file as uploaded ("original"); the degraded copies
+ *   only measure how fragile that score is (robustnessSpread), which widens the range.
+ * - Sampled frames (aggregate: 'frames'): the mean of the most suspicious quarter, and no
+ *   spread, since frames differ because the scene changes, not because of compression.
+ */
+export function summarizeModality(engine, variants, { aggregate = 'variants' } = {}) {
   const scores = variants.map((v) => v.score).filter((s) => typeof s === 'number');
   if (!scores.length) return { engine, variants, score: undefined, robustnessSpread: undefined };
+  if (aggregate === 'frames') return { engine, variants, score: topQuarterMean(scores), robustnessSpread: undefined };
+  const original = variants.find((v) => v.name === 'original' && typeof v.score === 'number');
   return {
     engine,
     variants,
-    score: mean(scores),
+    score: original ? original.score : mean(scores),
     robustnessSpread: Math.max(...scores) - Math.min(...scores),
   };
 }
@@ -73,7 +83,10 @@ export function computeConfidence(results, metadata = {}, forensics) {
   }
 
   // Metadata is supporting evidence only: generator tags nudge up, camera EXIF nudges down slightly.
-  if (metadata.generatorTags?.length) {
+  if (forensics?.provenance?.aiDisclosed) {
+    score = Math.max(score, 0.85);
+    reasons.push('Content credentials (C2PA) declare the file AI-generated');
+  } else if (metadata.generatorTags?.length) {
     score = Math.min(1, score + 0.15);
     reasons.push(`AI generator traces in metadata (${metadata.generatorTags.map((t) => t.tag).join(', ')})`);
   } else if (metadata.hasCameraExif) {
@@ -201,12 +214,26 @@ export function computeRisk({ mediaType, results, anomalies = [], metadata = {},
 
   let level = { likely_manipulated: 'high', inconclusive: 'medium', likely_authentic: 'low' }[confidence.band];
   if (level === 'high' && confidence.score >= 0.85 && confidence.margin <= 0.15) level = 'critical';
-  if (metadata.generatorTags?.length && LEVEL_ORDER.indexOf(level) < LEVEL_ORDER.indexOf('high')) level = 'high';
+  const aiDeclared = Boolean(forensics?.provenance?.aiDisclosed);
+  if ((metadata.generatorTags?.length || aiDeclared) && LEVEL_ORDER.indexOf(level) < LEVEL_ORDER.indexOf('high')) level = 'high';
 
   // Stub scores are placeholders, so never name a manipulation type from them.
   const stub = modalities.some((r) => r.engine === 'stub');
   const types = mergeTypes(results);
-  const top = !stub && types[0]?.probability >= 0.4 ? types[0] : null;
+  // Only name a technique when a detector is fairly sure; borderline values aren't evidence of a type.
+  const top = !stub && types[0]?.probability >= 0.55 ? types[0] : null;
+
+  if (aiDeclared) {
+    const by = forensics.provenance.claimGenerator ? ` by ${forensics.provenance.claimGenerator}` : '';
+    return {
+      level,
+      headline: `Declared AI-generated ${mediaType}${by}`,
+      action: 'The file’s own content credentials say it was made with AI. Treat it as synthetic unless the source can show otherwise.',
+      primaryType: 'ai_generated',
+      metrics,
+      types,
+    };
+  }
 
   if (stub) {
     return {

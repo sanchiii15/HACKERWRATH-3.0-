@@ -36,21 +36,6 @@ function EvidenceCard({ item, index }) {
   )
 }
 
-function ImageCard({ title, description, src, alt, children }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <img src={src} alt={alt} className="w-full rounded-lg border bg-black object-contain" />
-        {children}
-      </CardContent>
-    </Card>
-  )
-}
-
 function Stats({ rows }) {
   return (
     <Table>
@@ -68,7 +53,7 @@ function Stats({ rows }) {
 
 export default function ForensicsPanel({ forensics }) {
   if (!forensics) return <p className="text-sm text-muted-foreground">This scan was made before forensic checks were added.</p>
-  const { evidence = [], ela, spectrum, audio, timing, cuts, provenance, matches = [], errors = [] } = forensics
+  const { evidence = [], audio, timing, cuts, provenance, matches = [], errors = [] } = forensics
 
   return (
     <div className="space-y-6">
@@ -81,39 +66,6 @@ export default function ForensicsPanel({ forensics }) {
         {evidence.map((e, i) => <EvidenceCard key={e.key} item={e} index={i} />)}
       </div>
 
-      {(ela || spectrum) && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {ela && (
-            <ImageCard
-              title="Error level analysis heatmap"
-              description="Bright areas changed most when the image was re-saved. Edited or pasted regions often glow differently from their surroundings, but so do sharp edges and text."
-              src={ela.heatmap}
-              alt="Error level analysis heatmap"
-            >
-              <Stats rows={[
-                ['Mean error', ela.meanError.toFixed(2)],
-                ['Outlier ratio (p99 ÷ median block)', `${ela.outlierRatio.toFixed(1)}×`],
-                ['Analysed at', ela.analysedSize],
-                ['Source', ela.lossless ? 'Lossless (ELA is weak here)' : 'Lossy'],
-              ]} />
-            </ImageCard>
-          )}
-          {spectrum && (
-            <ImageCard
-              title="Frequency spectrum"
-              description="2D Fourier transform, low frequencies in the centre. Bright isolated dots away from the centre are periodic patterns that some generators and upscalers leave behind."
-              src={spectrum.image}
-              alt="Frequency spectrum"
-            >
-              <Stats rows={[
-                ['Strongest peak above average', spectrum.peakStrength.toFixed(2)],
-                ['Peak pixels', Math.round(spectrum.peakCount)],
-                ['High-frequency energy', pct(spectrum.highFrequencyShare, 1)],
-              ]} />
-            </ImageCard>
-          )}
-        </div>
-      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         {audio && (
@@ -158,8 +110,9 @@ export default function ForensicsPanel({ forensics }) {
             <CardContent>
               <Stats rows={[
                 ['C2PA manifest', provenance.c2paPresent ? 'Present (signature not verified)' : 'None'],
-                ['Claim generator', provenance.claimGenerator],
+                ['Signed by', provenance.claimGenerator],
                 ['Digital source type', provenance.digitalSourceType],
+                ['Recorded actions', provenance.actions?.length ? provenance.actions.map((a) => a.replace('c2pa.', '')).join(', ') : null],
                 ['Declares AI generation', provenance.aiDisclosed ? 'Yes' : 'No'],
               ]} />
             </CardContent>
