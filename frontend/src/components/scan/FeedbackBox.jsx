@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 const OPTIONS = [
   { label: 'authentic', text: "It's real", icon: ShieldCheck, className: 'hover:border-authentic hover:bg-authentic/10' },
   { label: 'manipulated', text: "It's manipulated", icon: ShieldAlert, className: 'hover:border-manipulated hover:bg-manipulated/10' },
-  { label: 'unsure', text: 'Not sure', icon: HelpCircle, className: 'hover:border-navy/40 hover:bg-accent' },
+  { label: 'unsure', text: 'Not sure', icon: HelpCircle, className: 'hover:border-foreground/25 hover:bg-accent' },
 ]
 
 // Lets users report the true answer; collected to measure accuracy and improve the detectors.
@@ -54,7 +54,7 @@ export default function FeedbackBox({ scanId, initialCount = 0 }) {
             className={cn(
               'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-all',
               className,
-              choice === label && 'border-navy bg-navy text-white hover:bg-navy dark:border-sky dark:bg-sky dark:text-navy-deep',
+              choice === label && 'border-primary bg-primary text-primary-foreground hover:bg-primary',
             )}
           >
             <Icon className="size-4" /> {text}
@@ -74,7 +74,7 @@ export default function FeedbackBox({ scanId, initialCount = 0 }) {
             type="button"
             onClick={submit}
             disabled={state === 'sending'}
-            className="h-9 rounded-lg bg-navy px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-navy"
+            className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {state === 'sending' ? 'Saving…' : 'Submit'}
           </button>

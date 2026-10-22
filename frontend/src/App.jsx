@@ -9,23 +9,19 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { getHealth } from '@/lib/api'
-import { MEDIA_TYPE_LIST } from '@/lib/mediaTypes'
+import { CHECK_LIST } from '@/lib/mediaTypes'
 import DashboardPage from '@/pages/DashboardPage'
 import CheckPage from '@/pages/CheckPage'
 import ScanPage from '@/pages/ScanPage'
 import HistoryPage from '@/pages/HistoryPage'
 import HowItWorksPage from '@/pages/HowItWorksPage'
 import StaySafePage from '@/pages/StaySafePage'
+import MessageCheckPage from '@/pages/MessageCheckPage'
+import MessageResultPage from '@/pages/MessageResultPage'
 
-// Defaults to the light (white + navy) theme; the toggle remembers the choice.
+// Dark is the default; the toggle switches to light and remembers the choice.
 function useTheme() {
-  const [dark, setDark] = useState(() => {
-    try {
-      return localStorage.getItem('theme') === 'dark'
-    } catch {
-      return false
-    }
-  })
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
     try {
@@ -47,7 +43,7 @@ function StatusDot() {
   const DETECTOR_TEXT = { onnx: 'AI models: local', remote: 'AI models: remote', stub: 'No AI model (stub)' }
   const text = health.status !== 'ok' ? 'API offline' : health.db !== 'connected' ? 'Database offline' : DETECTOR_TEXT[health.detector] ?? `Detectors: ${health.detector}`
   return (
-    <span className="hidden items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80 xl:flex">
+    <span className="hidden items-center gap-2 rounded-full border border-white/[0.08] px-3 py-1 font-mono text-[11px] text-white/60 xl:flex">
       <span className="relative flex size-2">
         {ok && <span className="absolute inline-flex size-full animate-ping rounded-full bg-authentic opacity-75" />}
         <span className={cn('relative inline-flex size-2 rounded-full', ok ? 'bg-authentic' : 'bg-manipulated')} />
@@ -67,7 +63,7 @@ const LINKS = [
 const pillClass = (active) =>
   cn(
     'relative flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm transition-all duration-200',
-    active ? 'bg-white font-medium text-navy shadow-sm' : 'text-white/75 hover:bg-white/10 hover:text-white',
+    active ? 'bg-white/[0.1] font-medium text-white' : 'text-white/60 hover:bg-white/[0.06] hover:text-white',
   )
 
 // One "New scan" entry instead of three separate links; the dashboard already shows the checks.
@@ -76,11 +72,11 @@ function NewScanMenu() {
   const { pathname } = useLocation()
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={cn(pillClass(pathname.startsWith('/check/')), 'outline-none data-[popup-open]:bg-white/15')}>
+      <DropdownMenuTrigger className={cn(pillClass(pathname.startsWith('/check/') || pathname.startsWith('/messages/')), 'outline-none data-[popup-open]:bg-white/15')}>
         New scan <ChevronDown className="size-3.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56">
-        {MEDIA_TYPE_LIST.map((m) => (
+        {CHECK_LIST.map((m) => (
           <DropdownMenuItem key={m.key} onClick={() => navigate(`/check/${m.key}`)} className="items-start gap-3 py-2">
             <m.icon className="mt-0.5 size-4" />
             <span className="grid gap-0.5">
@@ -97,13 +93,13 @@ function NewScanMenu() {
 // Phone layout: everything in one panel under the header.
 function MobileMenu({ onClose }) {
   const linkClass = ({ isActive }) =>
-    cn('block rounded-lg px-3 py-2 text-sm', isActive ? 'bg-white font-medium text-navy' : 'text-white/80 hover:bg-white/10')
+    cn('block rounded-lg px-3 py-2 text-sm', isActive ? 'bg-white/[0.1] font-medium text-white' : 'text-white/60 hover:bg-white/[0.06] hover:text-white')
   return (
     <nav className="border-t border-white/10 px-4 pt-2 pb-4 md:hidden" aria-label="Mobile">
       <div className="mx-auto grid max-w-6xl gap-1">
         <NavLink to="/" end className={linkClass} onClick={onClose}>Dashboard</NavLink>
         <p className="px-3 pt-2 text-xs font-medium tracking-wide text-white/50 uppercase">New scan</p>
-        {MEDIA_TYPE_LIST.map((m) => (
+        {CHECK_LIST.map((m) => (
           <NavLink key={m.key} to={`/check/${m.key}`} className={linkClass} onClick={onClose}>
             <span className="flex items-center gap-2"><m.icon className="size-4" />{m.label}</span>
           </NavLink>
@@ -125,14 +121,14 @@ export default function App() {
   return (
     <div className="relative isolate min-h-svh text-foreground">
       <div aria-hidden="true" className="page-grid pointer-events-none fixed inset-0 -z-10" />
-      <header className="sticky top-0 z-40 bg-navy-deep/95 text-white shadow-lg shadow-navy-deep/20 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-navy-deep/85 text-white backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:gap-4">
           <NavLink to="/" className="group flex shrink-0 items-center gap-2.5 font-semibold">
             <span className="grid size-9 place-items-center rounded-xl bg-white text-navy transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
               <ScanFace className="size-5" />
             </span>
             <span className="tracking-tight">
-              Deepfake<span className="text-sky">Screener</span>
+              Deepfake<span className="text-white/55">Screener</span>
             </span>
           </NavLink>
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
@@ -147,8 +143,8 @@ export default function App() {
             <button
               type="button"
               onClick={() => setDark(!dark)}
-              aria-label="Toggle theme"
-              className="grid size-9 place-items-center rounded-lg text-white/80 transition-all hover:rotate-12 hover:bg-white/10 hover:text-white"
+              aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+              className="grid size-9 place-items-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
             >
               {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
@@ -170,7 +166,9 @@ export default function App() {
       <main key={location.pathname} className="mx-auto max-w-6xl animate-rise px-4 py-8">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/check/message" element={<MessageCheckPage />} />
           <Route path="/check/:type" element={<CheckPage />} />
+          <Route path="/messages/:id" element={<MessageResultPage />} />
           <Route path="/scans/:id" element={<ScanPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />

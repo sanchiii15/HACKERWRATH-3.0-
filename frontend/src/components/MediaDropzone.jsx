@@ -55,9 +55,9 @@ export default function MediaDropzone({ mediaType }) {
         className={cn(
           'group relative flex min-h-72 cursor-pointer flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border-2 border-dashed bg-card p-10 text-center transition-all duration-300',
           isDragActive
-            ? 'scale-[1.01] border-navy bg-accent shadow-xl shadow-navy/10 dark:border-sky'
-            : 'border-navy/25 hover:border-navy/60 hover:bg-accent/50 hover:shadow-lg hover:shadow-navy/5 dark:border-white/20 dark:hover:border-sky/60',
-          uploading && 'scan-beam cursor-default border-solid border-navy dark:border-sky',
+            ? 'scale-[1.01] border-foreground/50 bg-accent shadow-xl shadow-navy/10'
+            : 'border-foreground/15 hover:border-foreground/35 hover:bg-accent/50 hover:shadow-lg hover:shadow-navy/5',
+          uploading && 'scan-beam cursor-default border-solid border-signal/60',
         )}
       >
         <input {...getInputProps()} />
@@ -65,18 +65,18 @@ export default function MediaDropzone({ mediaType }) {
         <div className="relative">
           {(isDragActive || uploading) && (
             <>
-              <span className="absolute inset-0 animate-pulse-ring rounded-2xl bg-navy/30 dark:bg-sky/30" />
-              <span className="absolute inset-0 animate-pulse-ring rounded-2xl bg-navy/20 [animation-delay:1.2s] dark:bg-sky/20" />
+              <span className="absolute inset-0 animate-pulse-ring rounded-2xl bg-signal/25" />
+              <span className="absolute inset-0 animate-pulse-ring rounded-2xl bg-signal/15 [animation-delay:1.2s]" />
             </>
           )}
           <span
             className={cn(
-              'relative grid size-20 place-items-center rounded-2xl bg-navy text-white shadow-lg shadow-navy/25 transition-transform duration-300 dark:bg-white dark:text-navy',
+              'relative grid size-20 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-navy/25 transition-transform duration-300',
               uploading ? 'animate-float' : 'group-hover:-translate-y-1 group-hover:scale-105',
             )}
           >
             <Icon className="size-9" />
-            <span className="absolute -right-2 -bottom-2 grid size-8 place-items-center rounded-full bg-sky text-navy-deep ring-4 ring-card">
+            <span className="absolute -right-2 -bottom-2 grid size-8 place-items-center rounded-full bg-foreground text-background ring-4 ring-card">
               <Upload className="size-4" />
             </span>
           </span>
@@ -87,20 +87,20 @@ export default function MediaDropzone({ mediaType }) {
             <p className="truncate text-sm font-medium">{file.name} · {formatBytes(file.size)}</p>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div
-                className="relative h-full overflow-hidden rounded-full bg-gradient-to-r from-navy to-sky transition-[width] duration-300"
+                className="relative h-full overflow-hidden rounded-full bg-signal transition-[width] duration-300"
                 style={{ width: `${progress}%` }}
               >
                 <span className="animate-shimmer absolute inset-0" />
               </div>
             </div>
-            <p className="text-xs font-medium text-navy dark:text-sky">
+            <p className="text-xs font-medium text-foreground">
               {progress < 100 ? `Uploading ${progress}%` : 'Upload complete, starting analysis…'}
             </p>
           </div>
         ) : (
           <div className="relative space-y-1">
             <p className="text-lg font-semibold">
-              {isDragActive ? 'Release to start the check' : <>Drop a {mediaType.noun} file here or <span className="text-navy underline decoration-sky decoration-2 underline-offset-4 dark:text-sky">browse</span></>}
+              {isDragActive ? 'Release to start the check' : <>Drop a {mediaType.noun} file here or <span className="text-foreground underline decoration-foreground/40 decoration-2 underline-offset-4">browse</span></>}
             </p>
             <p className="text-sm text-muted-foreground">{mediaType.formats} · up to {MAX_MB} MB</p>
           </div>

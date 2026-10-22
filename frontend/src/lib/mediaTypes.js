@@ -1,4 +1,4 @@
-import { AudioLines, Image, Video } from 'lucide-react'
+import { AudioLines, Image, MessageSquareText, Video } from 'lucide-react'
 
 // Per-media-type copy and upload rules for the dashboard and checker pages.
 export const MEDIA_TYPES = {
@@ -51,3 +51,24 @@ export const MEDIA_TYPES = {
 }
 
 export const MEDIA_TYPE_LIST = Object.values(MEDIA_TYPES)
+
+// Text and links aren't media files, so this check sits beside the three above
+// (in the New scan menu and the check switcher) but not among the dashboard cards.
+export const MESSAGE_CHECK = {
+  key: 'message',
+  label: 'Message check',
+  noun: 'message',
+  icon: MessageSquareText,
+  formats: 'Texts, emails and links',
+  tagline: 'Scam texts, fake bank alerts and suspicious links',
+  checks: [
+    'Highlights scam phrases: OTP requests, payment pressure, secrecy, threats and impersonation',
+    'Follows every link safely to its real destination, including shortened links',
+    'Checks each domain for look-alike names, risky endings and how recently it was registered',
+    'Sends links to videos, images or audio through the deepfake checks',
+  ],
+  detects: ['Phishing and fake KYC links', 'Boss, relative and bank impersonation', 'Gift card, UPI and crypto payment scams', 'Remote-access app requests'],
+}
+
+export const CHECK_LIST = [...MEDIA_TYPE_LIST, MESSAGE_CHECK]
+

@@ -101,21 +101,20 @@ function Steps({ items, accent }) {
 export default function StaySafePage() {
   return (
     <div className="space-y-12">
-      <section className="floating-panel relative overflow-hidden rounded-3xl bg-gradient-to-r from-navy-deep to-navy p-6 text-white sm:p-10">
-        <div className="absolute -right-10 -bottom-16 size-56 rounded-full bg-sky/20 blur-3xl" />
+      <section className="floating-panel relative overflow-hidden rounded-3xl bg-card p-6 text-foreground sm:p-10">
         <div className="relative grid gap-8 md:grid-cols-[1fr_320px] md:items-center">
           <div className="space-y-3">
             <p className="text-sm font-medium text-sky">Stay safe</p>
             <h1 className="text-3xl font-semibold tracking-tight text-balance">Think it’s a deepfake? Do this before anything else.</h1>
-            <p className="text-white/75">
+            <p className="text-muted-foreground">
               Detection helps, but the strongest protection is checking through a channel the scammer doesn’t control.
               These steps work even when a fake is too good to spot.
             </p>
           </div>
-          <div className="rounded-2xl bg-white p-5 text-navy-deep shadow-lg">
+          <div className="rounded-2xl bg-primary p-5 text-primary-foreground shadow-lg">
             <p className="text-sm font-medium">Money already sent or details shared?</p>
             <p className="mt-1 text-4xl font-bold tracking-tight">Call 1930</p>
-            <p className="mt-1 text-sm text-navy/70">National Cyber Crime Helpline, India. Report as early as possible.</p>
+            <p className="mt-1 text-sm text-primary-foreground/70">National Cyber Crime Helpline, India. Report as early as possible.</p>
           </div>
         </div>
       </section>
@@ -123,7 +122,7 @@ export default function StaySafePage() {
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="space-y-4">
           <h2 className="text-xl font-semibold tracking-tight">If you’re unsure right now</h2>
-          <Steps items={RIGHT_NOW} accent="bg-navy text-white dark:bg-white dark:text-navy" />
+          <Steps items={RIGHT_NOW} accent="bg-primary text-primary-foreground" />
         </section>
         <section className="space-y-4">
           <h2 className="text-xl font-semibold tracking-tight">If you already paid or shared details</h2>
@@ -157,7 +156,7 @@ export default function StaySafePage() {
         <div className="grid gap-4 md:grid-cols-3">
           {PREVENT.map((p) => (
             <div key={p.title} className="space-y-2 rounded-2xl border bg-card p-5">
-              <p.icon className="size-5 text-navy dark:text-sky" />
+              <p.icon className="size-5 text-foreground" />
               <p className="font-medium">{p.title}</p>
               <p className="text-sm text-muted-foreground">{p.text}</p>
             </div>
@@ -173,7 +172,7 @@ export default function StaySafePage() {
               <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">{c.label}</p>
                 {c.href ? (
-                  <a href={c.href} target="_blank" rel="noreferrer" className="font-medium text-navy underline-offset-4 select-all hover:underline dark:text-sky">{c.value}</a>
+                  <a href={c.href} target="_blank" rel="noreferrer" className="font-medium text-foreground underline-offset-4 select-all hover:underline">{c.value}</a>
                 ) : (
                   <p className="font-mono text-lg font-semibold select-all">{c.value}</p>
                 )}
@@ -187,7 +186,7 @@ export default function StaySafePage() {
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-5">
         <p className="flex-1 text-sm text-muted-foreground">Have the file? Check it before you decide.</p>
-        <Link to="/" className="rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy/90 dark:bg-white dark:text-navy">
+        <Link to="/" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
           Scan a file
         </Link>
       </div>
