@@ -51,7 +51,7 @@ export default function RiskSummary({ risk, confidence }) {
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{risk.headline}</h2>
           <p className="max-w-2xl text-sm text-muted-foreground">{risk.action}</p>
           <p className="text-xs text-muted-foreground">
-            Range {Math.round(confidence.low * 100)}–{Math.round(confidence.high * 100)}% (shaded arc) · ±{Math.round(confidence.margin * 100)}% margin
+            Likely range {Math.round(confidence.low * 100)}–{Math.round(confidence.high * 100)}% (shaded arc)
           </p>
         </div>
       </div>

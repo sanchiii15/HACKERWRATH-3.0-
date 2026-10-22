@@ -32,6 +32,9 @@ const modalitySchema = new Schema(
     variants: [variantSchema],
     // How much the score moved under compression/resizing. High = fragile result.
     robustnessSpread: Number,
+    // Largest rise / drop of a degraded copy versus the original (they widen the range differently).
+    riseOnCopies: Number,
+    dropOnCopies: Number,
     // Per-category probabilities on the original file, e.g. { face_swap: 0.7, lip_sync: 0.2 }.
     types: { type: Map, of: Number },
     // Raw outputs of each underlying model on the original file, for transparency.
@@ -128,6 +131,7 @@ const scanSchema = new Schema(
     ],
 
     processingMs: Number,
+    scoringVersion: Number,
   },
   { timestamps: true },
 );

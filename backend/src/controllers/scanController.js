@@ -4,15 +4,16 @@ import { HttpError } from '../middleware/errorHandler.js';
 import { sha256File } from '../services/hash.js';
 import { processScan } from '../services/pipeline.js';
 import { engineFor } from '../services/detectors/index.js';
+import { SCORING_VERSION } from '../services/scoring.js';
 
 function mediaTypeOf(mimetype) {
   return mimetype.split('/')[0];
 }
 
-// A cached result is stale if it predates the forensic checks or used a different engine
-// (e.g. the stub) for a modality that now has a real detector.
+// A cached result is stale if it was scored under older rules, predates the forensic checks,
+// or used a different engine (e.g. the stub) for a modality that now has a real detector.
 function isCurrent(scan) {
-  if (!scan.forensics || !scan.risk) return false;
+  if (!scan.forensics || !scan.risk || scan.scoringVersion !== SCORING_VERSION) return false;
   const results = scan.results?.toObject?.() ?? scan.results ?? {};
   return Object.entries(results).every(([modality, r]) => !r?.engine || r.engine === engineFor(modality));
 }

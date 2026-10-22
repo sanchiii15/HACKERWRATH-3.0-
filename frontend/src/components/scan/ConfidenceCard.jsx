@@ -40,8 +40,7 @@ export default function ConfidenceCard({ confidence }) {
         <CardTitle className="flex flex-wrap items-baseline gap-3 text-2xl">
           <span className={cn('rounded-md px-2.5 py-1 text-lg', band.className)}>{band.label}</span>
           <span className="text-base font-normal text-muted-foreground">
-            {pct(confidence.score)} likelihood of manipulation, range {pct(confidence.low)}–{pct(confidence.high)} (±
-            {pct(confidence.margin)})
+            {pct(confidence.score)} likelihood of manipulation, range {pct(confidence.low)}–{pct(confidence.high)}
           </span>
         </CardTitle>
       </CardHeader>
