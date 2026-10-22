@@ -9,13 +9,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { getHealth } from '@/lib/api'
-import { MEDIA_TYPE_LIST } from '@/lib/mediaTypes'
+import { CHECK_LIST } from '@/lib/mediaTypes'
 import DashboardPage from '@/pages/DashboardPage'
 import CheckPage from '@/pages/CheckPage'
 import ScanPage from '@/pages/ScanPage'
 import HistoryPage from '@/pages/HistoryPage'
 import HowItWorksPage from '@/pages/HowItWorksPage'
 import StaySafePage from '@/pages/StaySafePage'
+import MessageCheckPage from '@/pages/MessageCheckPage'
+import MessageResultPage from '@/pages/MessageResultPage'
 
 // Dark is the default; the toggle switches to light and remembers the choice.
 function useTheme() {
@@ -70,11 +72,11 @@ function NewScanMenu() {
   const { pathname } = useLocation()
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={cn(pillClass(pathname.startsWith('/check/')), 'outline-none data-[popup-open]:bg-white/15')}>
+      <DropdownMenuTrigger className={cn(pillClass(pathname.startsWith('/check/') || pathname.startsWith('/messages/')), 'outline-none data-[popup-open]:bg-white/15')}>
         New scan <ChevronDown className="size-3.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56">
-        {MEDIA_TYPE_LIST.map((m) => (
+        {CHECK_LIST.map((m) => (
           <DropdownMenuItem key={m.key} onClick={() => navigate(`/check/${m.key}`)} className="items-start gap-3 py-2">
             <m.icon className="mt-0.5 size-4" />
             <span className="grid gap-0.5">
@@ -97,7 +99,7 @@ function MobileMenu({ onClose }) {
       <div className="mx-auto grid max-w-6xl gap-1">
         <NavLink to="/" end className={linkClass} onClick={onClose}>Dashboard</NavLink>
         <p className="px-3 pt-2 text-xs font-medium tracking-wide text-white/50 uppercase">New scan</p>
-        {MEDIA_TYPE_LIST.map((m) => (
+        {CHECK_LIST.map((m) => (
           <NavLink key={m.key} to={`/check/${m.key}`} className={linkClass} onClick={onClose}>
             <span className="flex items-center gap-2"><m.icon className="size-4" />{m.label}</span>
           </NavLink>
@@ -164,7 +166,9 @@ export default function App() {
       <main key={location.pathname} className="mx-auto max-w-6xl animate-rise px-4 py-8">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/check/message" element={<MessageCheckPage />} />
           <Route path="/check/:type" element={<CheckPage />} />
+          <Route path="/messages/:id" element={<MessageResultPage />} />
           <Route path="/scans/:id" element={<ScanPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />

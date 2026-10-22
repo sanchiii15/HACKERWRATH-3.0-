@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import ScannerGraphic from '@/components/ScannerGraphic'
 import { useCountUp } from '@/hooks/useCountUp'
 import { getStats } from '@/lib/api'
-import { MEDIA_TYPE_LIST, MEDIA_TYPES } from '@/lib/mediaTypes'
+import { MEDIA_TYPE_LIST, MEDIA_TYPES, MESSAGE_CHECK } from '@/lib/mediaTypes'
 import { RISK_LEVELS, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -144,6 +144,32 @@ function ModuleCard({ mediaType, stats, index }) {
   )
 }
 
+// One full-width row for text and links, so the three media cards above stay an even grid.
+function MessageRow() {
+  const Icon = MESSAGE_CHECK.icon
+  return (
+    <Link
+      to="/check/message"
+      className="group flex animate-rise flex-col gap-4 rounded-2xl border bg-card p-5 shadow-sm transition-all duration-300 [animation-delay:270ms] hover:border-foreground/20 sm:flex-row sm:items-center"
+    >
+      <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
+        <Icon className="size-6" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h3 className="font-semibold">Got a suspicious text, email or link?</h3>
+        <p className="text-sm text-muted-foreground">
+          Paste it into the {MESSAGE_CHECK.label.toLowerCase()} to spot OTP requests, payment pressure, impersonation and
+          look-alike links.
+        </p>
+      </div>
+      <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-foreground">
+        Check a message
+        <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+      </span>
+    </Link>
+  )
+}
+
 function RiskDistribution({ mediaTypes }) {
   const data = MEDIA_TYPE_LIST.map((m) => ({ name: m.label.replace(' check', ''), ...mediaTypes[m.key].levels }))
   const empty = data.every((d) => LEVEL_KEYS.every((k) => !d[k]))
@@ -261,6 +287,7 @@ export default function DashboardPage() {
             <ModuleCard key={m.key} mediaType={m} stats={stats?.mediaTypes[m.key]} index={i} />
           ))}
         </div>
+        <MessageRow />
       </section>
 
       {stats ? (

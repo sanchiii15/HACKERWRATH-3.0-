@@ -35,6 +35,8 @@ export function uploadScan(file, { onProgress, force = false } = {}) {
 }
 
 export const getStats = () => call(api.get('/scans/stats'))
+export const checkMessage = (text) => call(api.post('/messages', { text }, { timeout: 60000 }))
+export const getMessage = (id) => call(api.get(`/messages/${id}`))
 export const sendFeedback = (id, body) => call(api.post(`/scans/${id}/feedback`, body))
 export const reportUrl = (id) => `${api.defaults.baseURL}/scans/${id}/report`
 export const getScan =(id) => call(api.get(`/scans/${id}`))
