@@ -2,23 +2,42 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { env } from '../../config/env.js';
+import { detectImage, detectVideo, detectAudio, localCapabilities } from './onnx.js';
+import { MODELS } from './models.js';
 
 /*
- * Detector client. The actual models (video, image, voice) are expected to run in a
- * separate inference service (e.g. Python/FastAPI) at DETECTOR_URL. Without one, a
- * deterministic stub is used so the full pipeline can be developed end to end.
+ * Detector front door. Per modality, the first available engine wins:
+ *   1. "remote" — an external inference service at DETECTOR_URL;
+ *   2. "onnx"   — pretrained models run in-process (download with `npm run models:download`);
+ *   3. "stub"   — deterministic placeholder so the pipeline still works end to end.
  * Stub scores are NOT real predictions and are marked engine: "stub".
  */
-
-export const detectorEngine = env.detectorUrl ? 'remote' : 'stub';
 
 // Manipulation categories each detector may report, so results say *what kind*
 // of manipulation is suspected rather than a bare "AI" label.
 export const MANIPULATION_TYPES = {
   video: ['face_swap', 'lip_sync', 'ai_generated', 'edited'],
   image: ['ai_generated', 'face_swap', 'edited'],
-  audio: ['voice_clone', 'tts', 'edited'],
+  audio: ['synthetic_voice', 'voice_clone', 'tts', 'edited'],
 };
+
+const LOCAL = { image: detectImage, video: detectVideo, audio: detectAudio };
+
+export function engineFor(modality) {
+  if (env.detectorUrl) return 'remote';
+  return localCapabilities()[modality] ? 'onnx' : 'stub';
+}
+
+// Summary for the health endpoint and the UI header.
+export function detectorStatus() {
+  const engines = { video: engineFor('video'), image: engineFor('image'), audio: engineFor('audio') };
+  const kinds = new Set(Object.values(engines));
+  const summary = kinds.size === 1 ? [...kinds][0] : Object.entries(engines).map(([m, e]) => `${m}:${e}`).join(' ');
+  const models = engines.image === 'onnx' || engines.audio === 'onnx'
+    ? Object.values(MODELS).map((m) => ({ repo: m.repo, license: m.license }))
+    : undefined;
+  return { summary, engines, models };
+}
 
 async function remoteDetect(modality, filePath) {
   const form = new FormData();
@@ -62,6 +81,10 @@ function clamp(x) {
   return Math.min(1, Math.max(0, x));
 }
 
-export function detect(modality, filePath) {
-  return detectorEngine === 'remote' ? remoteDetect(modality, filePath) : stubDetect(modality, filePath);
+// Returns { score, segments, types, models?, engine }.
+export async function detect(modality, filePath) {
+  const engine = engineFor(modality);
+  const run = engine === 'remote' ? remoteDetect : engine === 'onnx' ? (_m, p) => LOCAL[modality](p) : stubDetect;
+  const result = await run(modality, filePath);
+  return { ...result, score: clamp(result.score), engine };
 }

@@ -27,13 +27,15 @@ const variantSchema = new Schema(
 
 const modalitySchema = new Schema(
   {
-    engine: String, // "remote" | "stub"
+    engine: String, // "remote" | "onnx" | "stub"
     score: { type: Number, min: 0, max: 1 }, // mean across variants
     variants: [variantSchema],
     // How much the score moved under compression/resizing. High = fragile result.
     robustnessSpread: Number,
     // Per-category probabilities on the original file, e.g. { face_swap: 0.7, lip_sync: 0.2 }.
     types: { type: Map, of: Number },
+    // Raw outputs of each underlying model on the original file, for transparency.
+    models: Schema.Types.Mixed,
   },
   { _id: false },
 );

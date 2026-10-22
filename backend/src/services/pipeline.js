@@ -4,7 +4,7 @@ import { env } from '../config/env.js';
 import { Scan } from '../models/Scan.js';
 import { inspectMetadata } from './metadata.js';
 import { probe, extractAudio, extractFrames, createStressVariants } from './media.js';
-import { detect, detectorEngine } from './detectors/index.js';
+import { detect, engineFor } from './detectors/index.js';
 import { summarizeModality, computeConfidence, computeRisk } from './scoring.js';
 import { runForensics } from './forensics/index.js';
 
@@ -21,6 +21,7 @@ async function scoreVariants(modality, originalPath, variants) {
   const scored = [];
   let segments = [];
   let types;
+  let models;
   for (const v of all) {
     if (v.error) {
       scored.push({ name: v.name, description: v.description, error: v.error });
@@ -29,12 +30,12 @@ async function scoreVariants(modality, originalPath, variants) {
     try {
       const result = await detect(modality, v.path);
       scored.push({ name: v.name, description: v.description, score: result.score });
-      if (v.name === 'original') ({ segments, types } = result);
+      if (v.name === 'original') ({ segments, types, models } = result);
     } catch (err) {
       scored.push({ name: v.name, description: v.description, error: err.message });
     }
   }
-  return { modality: { ...summarizeModality(detectorEngine, scored), types }, segments };
+  return { modality: { ...summarizeModality(engineFor(modality), scored), types, models }, segments };
 }
 
 function toAnomalies(source, segments) {
@@ -87,15 +88,18 @@ export async function processScan(scanId, filePath) {
       await setStage(scan, 'Scanning sampled frames');
       const frames = await extractFrames(filePath, workDir, { duration: probeInfo.duration });
       const frameScores = [];
+      const typeSums = {};
       const step = frames.length > 1 ? frames[1].time - frames[0].time : 1;
       for (const f of frames) {
-        const { score } = await detect('image', f.path);
+        const { score, types } = await detect('image', f.path);
         frameScores.push({ name: `frame@${f.time.toFixed(1)}s`, score });
+        for (const [k, p] of Object.entries(types ?? {})) typeSums[k] = (typeSums[k] ?? 0) + p;
         if (score >= FRAME_ANOMALY_THRESHOLD) {
           anomalies.push({ source: 'frame', start: f.time, end: f.time + step, score, label: 'Frame flagged' });
         }
       }
-      results.image = summarizeModality(detectorEngine, frameScores);
+      const frameTypes = Object.fromEntries(Object.entries(typeSums).map(([k, s]) => [k, s / frames.length]));
+      results.image = { ...summarizeModality(engineFor('image'), frameScores), types: frameTypes };
     }
 
     if (scan.mediaType === 'audio' || (scan.mediaType === 'video' && hasAudio)) {

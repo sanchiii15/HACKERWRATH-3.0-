@@ -5,6 +5,8 @@ const WEIGHTS = { video: 0.5, image: 0.25, audio: 0.25 };
 const BASE_MARGIN = 0.05;
 const STUB_MARGIN = 0.25; // stub scores are meaningless, so the band should be wide
 const FORENSIC_WEIGHT = 0.15;
+// Pretrained models are used as published, without calibration on this app's data.
+const UNCALIBRATED_MARGIN = 0.08;
 const FORENSIC_ONLY_MARGIN = 0.2;
 const AUTHENTIC_BELOW = 0.35;
 const MANIPULATED_ABOVE = 0.65;
@@ -63,6 +65,8 @@ export function computeConfidence(results, metadata = {}, forensics) {
     margin += disagreement / 4;
   }
 
+  if (present.some(([, r]) => r.engine === 'onnx')) margin += UNCALIBRATED_MARGIN;
+
   if (present.some(([, r]) => r.engine === 'stub')) {
     margin += STUB_MARGIN;
     reasons.push('No ML model connected: scores come from the development stub');
@@ -95,6 +99,7 @@ export const TYPE_LABELS = {
   lip_sync: 'Lip-sync / face reenactment',
   ai_generated: 'Fully AI-generated',
   edited: 'Edited or spliced',
+  synthetic_voice: 'Synthetic or cloned voice',
   voice_clone: 'Voice clone',
   tts: 'Synthetic speech (TTS)',
 };
@@ -104,6 +109,7 @@ const TYPE_NOUNS = {
   lip_sync: () => 'lip-sync deepfake',
   ai_generated: (mediaType) => `AI-generated ${mediaType}`,
   edited: (mediaType) => `edited ${mediaType}`,
+  synthetic_voice: () => 'synthetic or cloned voice',
   voice_clone: () => 'cloned voice',
   tts: () => 'synthetic (text-to-speech) voice',
 };

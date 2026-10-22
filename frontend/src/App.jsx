@@ -36,7 +36,8 @@ function StatusDot() {
   }, [])
   if (!health) return null
   const ok = health.status === 'ok' && health.db === 'connected'
-  const text = health.status !== 'ok' ? 'API offline' : health.db !== 'connected' ? 'Database offline' : `Detector: ${health.detector}`
+  const DETECTOR_TEXT = { onnx: 'AI models: local', remote: 'AI models: remote', stub: 'No AI model (stub)' }
+  const text = health.status !== 'ok' ? 'API offline' : health.db !== 'connected' ? 'Database offline' : DETECTOR_TEXT[health.detector] ?? `Detectors: ${health.detector}`
   return (
     <span className="hidden items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80 lg:flex">
       <span className="relative flex size-2">
