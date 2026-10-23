@@ -1,0 +1,11 @@
+# Keep the build context small and free of local data.
+.git
+.claude
+node_modules
+**/node_modules
+frontend/dist
+backend/models
+backend/uploads
+backend/tmp
+**/.env
+*.log
